@@ -305,20 +305,17 @@ CREATE TABLE `order_items` (
 
 CREATE TABLE chat_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id INT NOT NULL,
-    kitchen VARCHAR(50) NOT NULL,
-    sender ENUM('customer', 'kitchen') NOT NULL,
+    customer_id INT NULL,
+    kitchen VARCHAR(50) NULL,
+    rider_id INT NULL,
+    sender ENUM('customer', 'kitchen', 'rider') NOT NULL,
     message TEXT NOT NULL,
     is_read TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     INDEX idx_customer_id (customer_id),
     INDEX idx_kitchen (kitchen),
-
-    CONSTRAINT fk_chat_customer
-        FOREIGN KEY (customer_id)
-        REFERENCES customer(customer_id)
-        ON DELETE CASCADE
+    INDEX idx_rider_id (rider_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
