@@ -290,6 +290,9 @@ $initials_text = initials($displayName);
                     </div>
                 </div>
                 <a href="./invoice.php" class="px-4 py-2 rounded text-white hover:bg-red-600 hover:bg-opacity-80 transition">Invoice</a>
+                <a href="./chat.php" class="px-4 py-2 rounded text-sm hover:bg-red-600 hover:bg-opacity-80 transition">
+                    <i class="fas fa-comments mr-1"></i> Chat
+                </a>
                 <a href="cart.php" class="px-4 py-2 rounded text-white hover:bg-red-600 hover:bg-opacity-80 transition">Cart</a>
             </nav>
 
