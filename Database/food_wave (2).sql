@@ -274,6 +274,7 @@ CREATE TABLE `orders` (
   `order_id` int(11) NOT NULL,
   `order_number` varchar(50) NOT NULL,
   `customer_id` int(11) NOT NULL,
+  `delivery_man_id` int(11) DEFAULT NULL,
   `kitchen` enum('khans','olympia','neptune') NOT NULL,
   `delivery_address` text NOT NULL,
   `payment_method` enum('cash_on_delivery','mobile_banking','card') NOT NULL DEFAULT 'cash_on_delivery',
@@ -301,6 +302,25 @@ CREATE TABLE `order_items` (
   `quantity` int(11) NOT NULL,
   `subtotal` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE chat_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    kitchen VARCHAR(50) NOT NULL,
+    sender ENUM('customer', 'kitchen') NOT NULL,
+    message TEXT NOT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_customer_id (customer_id),
+    INDEX idx_kitchen (kitchen),
+
+    CONSTRAINT fk_chat_customer
+        FOREIGN KEY (customer_id)
+        REFERENCES customer(customer_id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 
 --
 -- Indexes for dumped tables

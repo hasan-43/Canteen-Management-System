@@ -8,10 +8,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = trim($_POST['password']);
     $user_type = $_POST['user_type']; // 'customer' or 'worker'
 
+    if ($password === '') {
+        echo "<script>alert('Password is required.');</script>";
+        exit;
+    }
+
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
+
     if ($user_type === 'customer') {
         $sql = "INSERT INTO customer (username, fullname, email, password) VALUES (?, ?, ?, ?)";
     } else if ($user_type === 'worker') {
-        $sql = "INSERT INTO delivery (username, fullname, email, password) VALUES (?, ?, ?, ?)";
+        // Unified table name: delivery_man
+        $sql = "INSERT INTO delivery_man (username, fullname, email, password_hash) VALUES (?, ?, ?, ?)";
     } else {
         echo "<script>alert('Invalid user type.');</script>";
         exit;
@@ -19,11 +27,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt = mysqli_prepare($conn, $sql);
     if ($stmt) {
-        mysqli_stmt_bind_param($stmt, "ssss", $username, $fullname, $email, $password);
+        // Use password_hash instead of plaintext password
+        mysqli_stmt_bind_param($stmt, "ssss", $username, $fullname, $email, $password_hash);
         if (mysqli_stmt_execute($stmt)) {
             echo "<script>alert('Registration successful!'); window.location.href='login.php';</script>";
         } else {
             $error = mysqli_error($conn);
+            // Don't show raw DB errors in production, but keeping it simple for now as per original
             echo "<script>alert('Error: Could not register. " . addslashes($error) . "');</script>";
         }
         mysqli_stmt_close($stmt);

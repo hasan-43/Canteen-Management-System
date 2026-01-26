@@ -5,19 +5,13 @@ require_once 'config/db_connection.php';
 $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
-    $username = trim($_POST['username']);
-    $password = trim($_POST['password']);
-    // usertype may be absent for admin login
+    $username = trim($_POST['username'] ?? '');
+    $password = trim($_POST['password'] ?? '');
     $usertype = isset($_POST['usertype']) ? $conn->real_escape_string($_POST['usertype']) : '';
 
-    // Normalize username for matching
+    // Admin shortcut (same as before)
     $usernameLower = mb_strtolower(preg_replace('/\s+/', '', $username));
-
-    // Admin matching (no DB table). Shared admin password: 123456
-    // Accepts variants containing the keywords: khans, olympia, neptune
-    // BUT: Only allow admin login if NO usertype is selected (customer/deliveryman not checked)
     if ($password === '123456' && (strpos($usernameLower, 'khans') !== false || strpos($usernameLower, 'olympia') !== false || strpos($usernameLower, 'neptune') !== false)) {
-        // Check if customer or deliveryman was selected - if so, deny admin login
         if (!empty($usertype)) {
             $error_message = "Admin credentials cannot be used for customer or delivery man login. Please use your customer or delivery man account.";
         } else {
@@ -43,73 +37,126 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
         }
     }
 
-    // Non-admin: require role selection OR auto-detect from DB if not selected
-    if (empty($username) || empty($password)) {
+    if ($username === '' || $password === '') {
         $error_message = "Username and password are required.";
     } else {
-        // If usertype not provided, try to auto-detect by looking up username in DB
+        $usernameEsc = $conn->real_escape_string($username);
+
         if (empty($usertype)) {
-            // try customer first
-            $usernameEsc = $conn->real_escape_string($username);
-            $foundType = '';
-            $q = "SELECT customer_id,password,fullname FROM customer WHERE username='$usernameEsc' LIMIT 1";
+            // Auto-detect: try customer, then delivery_man, then legacy delivery
+            // 1) customer (legacy plain password)
+            $q = "SELECT customer_id, password, fullname FROM customer WHERE username='$usernameEsc' LIMIT 1";
             $r = $conn->query($q);
             if ($r && $r->num_rows > 0) {
-                $foundType = 'customer';
                 $row = $r->fetch_assoc();
-                $table_id = 'customer_id';
-                $storedPassword = $row['password'];
-                $fullname = $row['fullname'];
+                if ($password === $row['password']) {
+                    $_SESSION['user_id'] = $row['customer_id'];
+                    $_SESSION['username'] = $username;
+                    $_SESSION['fullname'] = $row['fullname'];
+                    $_SESSION['usertype'] = 'customer';
+                    header('Location: customer/navbar.php');
+                    exit();
+                } else {
+                    $error_message = 'Invalid username or password!';
+                }
             } else {
-                $q2 = "SELECT delivery_id,password,fullname FROM delivery WHERE username='$usernameEsc' LIMIT 1";
+                // 2) delivery_man (new, hashed passwords)
+                $q2 = "SELECT id, password_hash, fullname FROM delivery_man WHERE username='$usernameEsc' LIMIT 1";
                 $r2 = $conn->query($q2);
                 if ($r2 && $r2->num_rows > 0) {
-                    $foundType = 'deliveryman';
                     $row = $r2->fetch_assoc();
-                    $table_id = 'delivery_id';
-                    $storedPassword = $row['password'];
-                    $fullname = $row['fullname'];
+                    if (password_verify($password, $row['password_hash'])) {
+                        $_SESSION['delivery_id'] = $row['id'];
+                        $_SESSION['delivery_name'] = $row['fullname'];
+                        $_SESSION['usertype'] = 'delivery';
+                        header('Location: Delivery Man/navbar.php');
+                        exit();
+                    } else {
+                        $error_message = 'Invalid username or password!';
+                    }
+                } else {
+                    // 3) legacy delivery table (plaintext password)
+                    $q3 = "SELECT delivery_id, password, fullname FROM delivery WHERE username='$usernameEsc' LIMIT 1";
+                    $r3 = $conn->query($q3);
+                    if ($r3 && $r3->num_rows > 0) {
+                        $row = $r3->fetch_assoc();
+                        if ($password === $row['password']) {
+                            $_SESSION['delivery_id'] = $row['delivery_id'];
+                            $_SESSION['delivery_name'] = $row['fullname'];
+                            $_SESSION['usertype'] = 'delivery';
+                            header('Location: Delivery Man/navbar.php');
+                            exit();
+                        } else {
+                            $error_message = 'Invalid username or password!';
+                        }
+                    } else {
+                        $error_message = "Please select Customer or Delivery Man (or enter admin shop + password).";
+                    }
                 }
             }
 
-            if ($foundType === '') {
-                $error_message = "Please select Customer or Delivery Man (or enter admin shop + password).";
-            } else {
-                // check password (if you're currently storing raw passwords)
-                if ($password === $storedPassword) {
-                    // success: set session and redirect
-                    $_SESSION['user_id'] = $row[$table_id];
-                    $_SESSION['username'] = $username;
-                    $_SESSION['fullname'] = $fullname;
-                    $_SESSION['usertype'] = ($foundType === 'customer') ? 'customer' : 'deliveryman';
-                    header("Location: customer/navbar.php");
+        } else {
+            // user explicitly selected role
+            if ($usertype == 'customer') {
+                $query = "SELECT * FROM customer WHERE username='$usernameEsc' AND password='$password' LIMIT 1";
+                $result = $conn->query($query);
+                if ($result && $result->num_rows > 0) {
+                    $row = $result->fetch_assoc();
+                    $_SESSION['user_id'] = $row['customer_id'];
+                    $_SESSION['username'] = $row['username'];
+                    $_SESSION['fullname'] = $row['fullname'];
+                    $_SESSION['usertype'] = 'customer';
+                    header('Location: customer/navbar.php');
                     exit();
                 } else {
-                    $error_message = "Invalid username or password!";
+                    $error_message = 'Invalid username or password!';
                 }
-            }
-        } else {
-            // usertype provided (existing flow) - keep but escape inputs
-            $usernameEsc = $conn->real_escape_string($username);
-            $passwordEsc = $conn->real_escape_string($password);
-            if ($usertype == 'customer') {
-                $query = "SELECT * FROM customer WHERE username='$usernameEsc' AND password='$passwordEsc' LIMIT 1";
-                $table_id = 'customer_id';
-            } else { // deliveryman
-                $query = "SELECT * FROM delivery WHERE username='$usernameEsc' AND password='$passwordEsc' LIMIT 1";
-                $table_id = 'delivery_id';
-            }
-            $result = $conn->query($query);
-            if ($result && $result->num_rows > 0) {
-                $row = $result->fetch_assoc();
-                $_SESSION['user_id'] = $row[$table_id];
-                $_SESSION['username'] = $row['username'];
-                $_SESSION['fullname'] = $row['fullname'];
-                $_SESSION['usertype'] = $usertype;
-                header("Location: customer/navbar.php");
-                exit();
-            } else {
-                $error_message = "Invalid username or password!";
+            } else { // deliveryman explicit
+                // try new table first
+                $stmt = $conn->prepare("SELECT id, username, fullname, password_hash FROM delivery_man WHERE username = ? LIMIT 1");
+                if ($stmt) {
+                    $stmt->bind_param('s', $usernameEsc);
+                    $stmt->execute();
+                    $res = $stmt->get_result();
+                    if ($res && $res->num_rows > 0) {
+                        $r = $res->fetch_assoc();
+                        if (password_verify($password, $r['password_hash'])) {
+                            $_SESSION['delivery_id'] = $r['id'];
+                            $_SESSION['delivery_name'] = $r['fullname'];
+                            $_SESSION['usertype'] = 'delivery';
+                            header('Location: Delivery%20Man/navbar.php');
+                            exit();
+                        } else {
+                            $error_message = 'Invalid username or password!';
+                        }
+                    }
+                    $stmt->close();
+                }
+
+                // fallback to legacy delivery table
+                if (empty($error_message)) {
+                    $stmt2 = $conn->prepare("SELECT delivery_id, username, fullname, password FROM delivery WHERE username = ? LIMIT 1");
+                    if ($stmt2) {
+                        $stmt2->bind_param('s', $usernameEsc);
+                        $stmt2->execute();
+                        $res2 = $stmt2->get_result();
+                        if ($res2 && $res2->num_rows > 0) {
+                            $r2 = $res2->fetch_assoc();
+                            if ($password === $r2['password']) {
+                                $_SESSION['delivery_id'] = $r2['delivery_id'];
+                                $_SESSION['delivery_name'] = $r2['fullname'];
+                                $_SESSION['usertype'] = 'delivery';
+                                header('Location: Delivery%20Man/navbar.php');
+                                exit();
+                            } else {
+                                $error_message = 'Invalid username or password!';
+                            }
+                        } else {
+                            if (empty($error_message)) $error_message = 'Invalid username or password!';
+                        }
+                        $stmt2->close();
+                    }
+                }
             }
         }
     }

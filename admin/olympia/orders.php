@@ -67,11 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
 
 // Fetch all orders for Olympia Kitchen with customer details
 $orders = [];
-$sql = "SELECT o.*, c.username, c.fullname, c.email, c.phone 
-        FROM orders o 
-        LEFT JOIN customer c ON o.customer_id = c.customer_id 
-        WHERE LOWER(o.kitchen) = 'olympia' AND o.order_status <> 'delivered' 
-        ORDER BY o.order_date DESC";
+$sql = "SELECT o.*, c.username, c.fullname, c.email, c.phone AS customer_phone, c.address AS customer_address 
+    FROM orders o 
+    LEFT JOIN customer c ON o.customer_id = c.customer_id 
+    WHERE LOWER(o.kitchen) = 'olympia' AND o.order_status <> 'delivered' 
+    ORDER BY o.order_date DESC";
 $result = $conn->query($sql);
 if (!$result) {
     error_log("Order query error: " . $conn->error);
@@ -390,9 +390,8 @@ if ($result && $result->num_rows > 0) {
                                 <div>
                                     <h3 class="text-xl font-bold mb-1">Order #<?= htmlspecialchars($order['order_number']) ?></h3>
                                     <p class="text-sm opacity-90">Customer: <?= htmlspecialchars($order['fullname'] ?? $order['username']) ?></p>
-                                    <?php if (!empty($order['phone'])): ?>
-                                        <p class="text-sm opacity-90">Phone: <?= htmlspecialchars($order['phone']) ?></p>
-                                    <?php endif; ?>
+                                    <?php $orderPhone = $order['phone'] ?? $order['phone_number'] ?? $order['customer_phone'] ?? 'N/A'; ?>
+                                    <p class="text-sm opacity-90">Phone: <?= htmlspecialchars($orderPhone) ?></p>
                                 </div>
                                 <div class="text-right">
                                     <span class="status-badge status-<?= htmlspecialchars($order['order_status']) ?>">

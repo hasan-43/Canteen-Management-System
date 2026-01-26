@@ -489,7 +489,7 @@ $initials_text = initials($displayName);
             </div>
         <?php endif; ?>
 
-        <form method="POST" id="checkoutForm">
+        <form method="POST" id="checkoutForm" onsubmit="return validateCheckoutForm(event)">
             <input type="hidden" name="kitchen" value="<?= htmlspecialchars($kitchen) ?>">
             <div class="checkout-outer">
                 <div class="checkout-inner">
@@ -516,15 +516,15 @@ $initials_text = initials($displayName);
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     Phone Number <span class="text-red-600">*</span>
                                 </label>
-                                <input type="tel" 
+                                <input type="text" 
                                        name="phone_number"
                                        id="phone_number"
                                        value="<?= htmlspecialchars($customerInfo['phone'] ?? '') ?>" 
                                        required
-                                       placeholder="Enter your contact number"
-                                       pattern="[0-9+\-\s()]+"
-                                       class="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                                       placeholder="Enter your contact number (e.g., 01712345678)"
+                                       class="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" oninput="validatePhone()">
                                 <p class="text-xs text-gray-600 mt-1">We'll use this number to contact you about your order</p>
+                                <span id="phoneError" class="text-red-600 text-xs hidden">Please enter a valid phone number (min 10 digits)</span>
                             </div>
                             
                             <div>
@@ -665,6 +665,43 @@ $initials_text = initials($displayName);
     </main>
 
     <script>
+        // Phone validation
+        function validatePhone() {
+            const phone = document.getElementById('phone_number').value.trim();
+            const phoneError = document.getElementById('phoneError');
+            if (phone.length < 10) {
+                phoneError.classList.remove('hidden');
+                return false;
+            } else {
+                phoneError.classList.add('hidden');
+                return true;
+            }
+        }
+
+        // Form validation on submit
+        function validateCheckoutForm(event) {
+            const phone = document.getElementById('phone_number').value.trim();
+            const address = document.getElementById('delivery_address').value.trim();
+            const paymentMethod = document.querySelector('input[name="payment_method"]:checked');
+
+            if (!phone || phone.length < 10) {
+                alert('Please enter a valid phone number (at least 10 digits)');
+                event.preventDefault();
+                return false;
+            }
+            if (!address) {
+                alert('Please enter a delivery address');
+                event.preventDefault();
+                return false;
+            }
+            if (!paymentMethod) {
+                alert('Please select a payment method');
+                event.preventDefault();
+                return false;
+            }
+            return true;
+        }
+
         // Profile menu toggle
         document.getElementById('profileBtn').addEventListener('click', function(e) {
             e.stopPropagation();
