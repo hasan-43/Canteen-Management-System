@@ -57,7 +57,9 @@ if ($res && $res->num_rows > 0) {
 ?>
 <!doctype html>
 <html lang="en">
-<head>
+<HEAD>
+    <script src="../resources/js/theme.js"></script>
+    <script src="../resources/js/theme.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Delivery Orders</title>
@@ -66,6 +68,7 @@ if ($res && $res->num_rows > 0) {
     .orders-hero { position: relative; background-image: url('../resources/sign_up.jpg'); background-size: cover; background-position: center; min-height: 240px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
     .orders-hero::after { content:''; position:absolute; inset:0; background: rgba(0,0,0,0.55); }
     .orders-hero h1 { position:relative; z-index:1; color:#fff; font-size:2.25rem; font-weight:800; text-shadow: 0 2px 12px rgba(0,0,0,0.35); }
+    header .nav-buttons a { color: #ffffff !important; }
   </style>
 </head>
 <body class="bg-gray-50">

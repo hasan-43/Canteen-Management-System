@@ -59,6 +59,32 @@ function get_messages($conn) {
     $kitchen = !empty($_GET['kitchen']) ? $_GET['kitchen'] : null;
     $rider_id = !empty($_GET['rider_id']) ? (int)$_GET['rider_id'] : null;
 
+    // Mark messages as read for the recipient
+    if (isset($_SESSION['usertype'])) {
+        $viewer_role = $_SESSION['usertype'];
+        if ($viewer_role === 'customer' && isset($_SESSION['user_id']) && $customer_id == $_SESSION['user_id']) {
+            if ($kitchen) {
+                $conn->query("UPDATE chat_messages SET is_read = 1 WHERE customer_id = $customer_id AND kitchen = '$kitchen' AND rider_id IS NULL AND sender <> 'customer'");
+            } elseif ($rider_id) {
+                $conn->query("UPDATE chat_messages SET is_read = 1 WHERE customer_id = $customer_id AND rider_id = $rider_id AND kitchen IS NULL AND sender <> 'customer'");
+            }
+        } elseif ($viewer_role === 'admin' && isset($_SESSION['shop_table'])) {
+            $kit = $_SESSION['shop_table'];
+            if ($customer_id) {
+                $conn->query("UPDATE chat_messages SET is_read = 1 WHERE customer_id = $customer_id AND kitchen = '$kit' AND rider_id IS NULL AND sender <> 'kitchen'");
+            } elseif ($rider_id) {
+                $conn->query("UPDATE chat_messages SET is_read = 1 WHERE kitchen = '$kit' AND rider_id = $rider_id AND customer_id IS NULL AND sender <> 'kitchen'");
+            }
+        } elseif ($viewer_role === 'delivery' && isset($_SESSION['delivery_id'])) {
+            $rid = (int)$_SESSION['delivery_id'];
+            if ($customer_id) {
+                $conn->query("UPDATE chat_messages SET is_read = 1 WHERE customer_id = $customer_id AND rider_id = $rid AND kitchen IS NULL AND sender <> 'rider'");
+            } elseif ($kitchen) {
+                $conn->query("UPDATE chat_messages SET is_read = 1 WHERE kitchen = '$kitchen' AND rider_id = $rid AND customer_id IS NULL AND sender <> 'rider'");
+            }
+        }
+    }
+
     $params = [];
     $types = "";
     $where = [];
@@ -102,9 +128,9 @@ function get_customer_riders($conn) {
     $customerId = (int)$_GET['customer_id'];
 
     // Get riders assigned to current active orders
-    $sql = "SELECT DISTINCT d.id, d.fullname, d.username 
+    $sql = "SELECT DISTINCT d.delivery_id AS id, d.fullname, d.username 
             FROM orders o 
-            JOIN delivery_man d ON o.delivery_man_id = d.id 
+            JOIN delivery d ON o.delivery_man_id = d.delivery_id 
             WHERE o.customer_id = ? AND o.order_status NOT IN ('delivered', 'cancelled')";
     
     $stmt = $conn->prepare($sql);
@@ -143,11 +169,11 @@ function get_admin_conversations($conn) {
     while ($row = $result->fetch_assoc()) $res["customers"][] = $row;
 
     // Riders (Chat history)
-    $sql_riders = "SELECT d.id, d.fullname, d.username, MAX(cm.created_at) as last_msg_time
+    $sql_riders = "SELECT d.delivery_id AS id, d.fullname, d.username, MAX(cm.created_at) as last_msg_time
             FROM chat_messages cm
-            JOIN delivery_man d ON cm.rider_id = d.id
+            JOIN delivery d ON cm.rider_id = d.delivery_id
             WHERE cm.kitchen = ? AND cm.customer_id IS NULL
-            GROUP BY d.id, d.fullname, d.username
+            GROUP BY d.delivery_id, d.fullname, d.username
             ORDER BY last_msg_time DESC";
     $stmt = $conn->prepare($sql_riders);
     $stmt->bind_param("s", $kitchen);
@@ -156,9 +182,9 @@ function get_admin_conversations($conn) {
     while ($row = $result->fetch_assoc()) $res["riders"][] = $row;
 
     // Active Riders (Not in chat yet)
-    $sql_active = "SELECT DISTINCT d.id, d.fullname, d.username, NULL as last_msg_time
+    $sql_active = "SELECT DISTINCT d.delivery_id AS id, d.fullname, d.username, NULL as last_msg_time
                    FROM orders o
-                   JOIN delivery_man d ON o.delivery_man_id = d.id
+                   JOIN delivery d ON o.delivery_man_id = d.delivery_id
                    WHERE o.kitchen = ? AND o.order_status NOT IN ('delivered', 'cancelled')";
     $stmt = $conn->prepare($sql_active);
     $stmt->bind_param("s", $kitchen);
@@ -203,7 +229,7 @@ function get_rider_conversations($conn) {
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
         $kid = $row['id'];
-        $name = ($kid == 'khans') ? 'Khans Kitchen' : (($kid == 'neptune') ? 'Neptune Kitchen' : 'Olympia Kitchen');
+        $name = ucwords(str_replace('_', ' ', $kid)) . ' Kitchen';
         $res["kitchens"][] = ["id" => $kid, "name" => $name];
     }
 

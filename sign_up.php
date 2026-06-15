@@ -13,13 +13,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $password_hash = password_hash($password, PASSWORD_DEFAULT);
-
     if ($user_type === 'customer') {
         $sql = "INSERT INTO customer (username, fullname, email, password) VALUES (?, ?, ?, ?)";
     } else if ($user_type === 'worker') {
-        // Unified table name: delivery_man
-        $sql = "INSERT INTO delivery_man (username, fullname, email, password_hash) VALUES (?, ?, ?, ?)";
+        // Unified table name: delivery
+        $sql = "INSERT INTO delivery (username, fullname, email, password) VALUES (?, ?, ?, ?)";
     } else {
         echo "<script>alert('Invalid user type.');</script>";
         exit;
@@ -27,8 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt = mysqli_prepare($conn, $sql);
     if ($stmt) {
-        // Use password_hash instead of plaintext password
-        mysqli_stmt_bind_param($stmt, "ssss", $username, $fullname, $email, $password_hash);
+        // Store password as plain text
+        mysqli_stmt_bind_param($stmt, "ssss", $username, $fullname, $email, $password);
         if (mysqli_stmt_execute($stmt)) {
             echo "<script>alert('Registration successful!'); window.location.href='login.php';</script>";
         } else {
@@ -92,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </style>
 </head>
-<body class="min-h-screen bg-cover bg-center bg-no-repeat" style="background-image: url('resources/sign_up.jpg');">
+<body class="min-h-screen bg-cover bg-center bg-no-repeat" style="background-image: url('resources/Log_IN.jpg');">
     <div class="flex items-center justify-center min-h-screen bg-black bg-opacity-50 relative">
         <div class="flex w-full max-w-5xl mx-auto rounded-lg overflow-hidden shadow-lg relative" style="min-height: 700px;">
             

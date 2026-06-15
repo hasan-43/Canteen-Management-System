@@ -60,7 +60,7 @@ $initials_text = initials($displayName);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Successful - Food Wave</title>
+    <title>Order Successful - Campus Cravings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -71,23 +71,17 @@ $initials_text = initials($displayName);
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
         
-        .food-wave {
-            font-weight: 900;
-            letter-spacing: 3px;
-            font-size: 2.4rem;
-            background: linear-gradient(90deg, #ff0000);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: fadeOpenClose 3s ease-in-out infinite;
-            display: inline-block;
+        header { position: sticky; top: 0; z-index: 50; background: rgba(10, 10, 12, 0.9) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        header a { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .brand-text { font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.05em; transition: color 0.3s ease; }
+        header a:hover .brand-text { color: #ef4444; }
+        .campus-cravings-logo {
+            height: 50px;
+            width: auto;
+            transition: transform 0.3s ease;
         }
-        
-        @keyframes fadeOpenClose {
-            0%   { opacity:0; transform: scale(0.6); }
-            25%  { opacity:1; transform: scale(1); }
-            75%  { opacity:1; transform: scale(1); }
-            100% { opacity:0; transform: scale(0.6); }
+        .campus-cravings-logo:hover {
+            transform: scale(1.05);
         }
         
         .success-icon {
@@ -116,9 +110,12 @@ $initials_text = initials($displayName);
 
 <body class="min-h-screen">
     <!-- Header -->
-    <header class="bg-white/95 backdrop-blur border-b border-gray-200">
+    <header>
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
-            <div class="food-wave">Food Wave</div>
+            <a href="./navbar.php">
+                <img src="../resources/logo.jpg" alt="Campus Cravings" class="campus-cravings-logo" />
+                <span class="brand-text">Campus Cravings</span>
+            </a>
         </div>
     </header>
 

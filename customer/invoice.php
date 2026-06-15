@@ -63,15 +63,28 @@ function initials($name) {
 $displayName = $_SESSION['fullname'] ?? $_SESSION['username'] ?? 'Customer';
 $profilePic = $_SESSION['profile_pic'] ?? null;
 $initials_text = initials($displayName);
+
+$shops = [];
+$shopResult = $conn->query("SELECT shop_id, shop_name FROM shop ORDER BY shop_id");
+if ($shopResult) {
+    while ($row = $shopResult->fetch_assoc()) {
+        $shops[] = [
+            'name'         => $row['shop_name'],
+            'display_name' => ucfirst($row['shop_name']) . ' Kitchen',
+        ];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="../resources/js/theme.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice - Food Wave</title>
+    <title>Invoice - Campus Cravings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         
@@ -116,23 +129,17 @@ $initials_text = initials($displayName);
             z-index: -1;
         }
         
-        .food-wave {
-            font-weight: 900;
-            letter-spacing: 3px;
-            font-size: 2.4rem;
-            background: linear-gradient(90deg, #ff0000);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: fadeOpenClose 3s ease-in-out infinite;
-            display: inline-block;
+        header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(10, 10, 12, 0.9) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        header a { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .brand-text { font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.05em; transition: color 0.3s ease; }
+        header a:hover .brand-text { color: #ef4444; }
+        .campus-cravings-logo {
+            height: 50px;
+            width: auto;
+            transition: transform 0.3s ease;
         }
-        
-        @keyframes fadeOpenClose {
-            0%   { opacity:0; transform: scale(0.6); }
-            25%  { opacity:1; transform: scale(1); }
-            75%  { opacity:1; transform: scale(1); }
-            100% { opacity:0; transform: scale(0.6); }
+        .campus-cravings-logo:hover {
+            transform: scale(1.05);
         }
         
         .nav-buttons { display: flex; align-items: center; gap: 0.75rem; }
@@ -264,16 +271,57 @@ $initials_text = initials($displayName);
                 margin: 10mm;
             }
         }
+        
+        /* PDF Compact Styles */
+        .pdf-compact .p-8 { padding: 0.75rem !important; }
+        .pdf-compact h1 { font-size: 1.5rem !important; }
+        .pdf-compact h3 { font-size: 0.9rem !important; margin-bottom: 0.5rem !important; }
+        .pdf-compact .text-4xl { font-size: 1.75rem !important; }
+        .pdf-compact .text-3xl { font-size: 1.25rem !important; }
+        .pdf-compact .text-2xl { font-size: 1.1rem !important; }
+        .pdf-compact .text-xl { font-size: 1rem !important; }
+        .pdf-compact .text-lg { font-size: 0.9rem !important; }
+        .pdf-compact .grid { gap: 0.75rem !important; }
+        .pdf-compact .mb-8 { margin-bottom: 0.75rem !important; }
+        .pdf-compact .p-6 { padding: 0.75rem !important; }
+        .pdf-compact .px-4 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        .pdf-compact .py-3 { padding-top: 0.35rem !important; padding-bottom: 0.35rem !important; }
+        .pdf-compact .space-y-3 > * + * { margin-top: 0.35rem !important; }
+        .pdf-compact table { font-size: 0.8rem !important; }
+        .pdf-compact .absolute { display: none !important; }
+        
+        /* Review Modal Styles */
+        .review-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); overflow: auto; }
+        .review-modal.show { display: block; }
+        .review-modal-content { background-color: #fff; margin: 3% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 700px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+        .review-modal-header { padding: 1.5rem; border-bottom: 2px solid #f3f4f6; background: linear-gradient(135deg, #dc2626, #991b1b); color: white; }
+        .review-modal-header h2 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+        .review-modal-close { color: white; float: right; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
+        .review-modal-close:hover { opacity: 0.7; }
+        .review-modal-body { padding: 1.5rem; overflow-y: auto; flex: 1; }
+        .star-rating { display: flex; gap: 0.5rem; }
+        .star-btn { font-size: 2rem; color: #d1d5db; cursor: pointer; transition: all 0.2s; }
+        .star-btn:hover, .star-btn.active { color: #fbbf24; transform: scale(1.1); }
+        .toast { position:fixed; top:5rem; right:1.5rem; z-index:9999; min-width:300px; max-width:400px; padding:1rem 1.25rem; border-radius:0.5rem; box-shadow:0 10px 25px -5px rgba(0,0,0,0.2); display:flex; align-items:center; gap:0.75rem; transform:translateX(500px); transition:transform 0.3s ease-in-out; }
+        .toast.show { transform:translateX(0); }
+        .toast.success { background:#10b981; color:#fff; }
+        .toast.error { background:#ef4444; color:#fff; }
+        .toast-icon { font-size:1.5rem; }
+        .toast-close { margin-left:auto; cursor:pointer; opacity:0.8; font-size:1.5rem; line-height:1; }
+        .toast-close:hover { opacity:1; }
     </style>
 </head>
 
 <body class="min-h-screen">
     <!-- Header/Navbar - Matches navbar.php styling -->
-    <header class="fixed top-0 left-0 right-0 z-50 bg-black/70 backdrop-blur-md border-b border-gray-800 no-print">
+    <header class="no-print">
         <div class="relative h-16 max-w-7xl mx-auto px-4">
             <!-- Logo left -->
             <div class="absolute left-4 top-1/2 -translate-y-1/2">
-                <h2 class="food-wave">Food Wave</h2>
+                <a href="./navbar.php">
+                    <img src="../resources/logo.jpg" alt="Campus Cravings" class="campus-cravings-logo" />
+                    <span class="brand-text">Campus Cravings</span>
+                </a>
             </div>
 
             <!-- Nav buttons center -->
@@ -284,9 +332,12 @@ $initials_text = initials($displayName);
                         Shop <i class="fas fa-chevron-down ml-1 text-xs"></i>
                     </button>
                     <div class="absolute left-0 mt-2 w-48 bg-black/95 border border-gray-700 rounded shadow-lg opacity-0 group-hover:opacity-100 transform scale-95 group-hover:scale-100 transition-all origin-top">
-                        <a href="./khans.php" class="block px-4 py-2 text-white hover:bg-gray-700">Khans Kitchen</a>
-                        <a href="./olympia.php" class="block px-4 py-2 text-white hover:bg-gray-700">Olympia Kitchen</a>
-                        <a href="./neptune.php" class="block px-4 py-2 text-white hover:bg-gray-700">Neptune Kitchen</a>
+                        <?php foreach ($shops as $shop): 
+                            $isLegacy = in_array($shop['name'], ['khans', 'olympia', 'neptune']);
+                            $shopUrl = $isLegacy ? "./" . htmlspecialchars($shop['name']) . ".php" : "./shop.php?name=" . urlencode($shop['name']);
+                        ?>
+                            <a href="<?= $shopUrl ?>" class="block px-4 py-2 text-white hover:bg-gray-700"><?= htmlspecialchars($shop['display_name']) ?></a>
+                        <?php endforeach; ?>
                     </div>
                 </div>
                 <a href="./invoice.php" class="px-4 py-2 rounded text-white hover:bg-red-600 hover:bg-opacity-80 transition">Invoice</a>
@@ -335,11 +386,13 @@ $initials_text = initials($displayName);
                     <div class="relative flex justify-between items-start">
                         <div>
                             <h1 class="text-4xl font-bold mb-2">INVOICE</h1>
-                            <p class="text-red-100">Food Wave Canteen Management</p>
+                            <p class="text-red-100">Campus Cravings Canteen Management</p>
                         </div>
-                        <button onclick="window.print()" class="no-print px-6 py-3 bg-white/95 text-purple-600 rounded-lg hover:bg-white transition shadow-lg font-bold">
-                            <i class="fas fa-print mr-2"></i>Print Invoice
-                        </button>
+                        <div class="no-print">
+                            <button onclick="downloadPDF()" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition shadow-lg font-bold">
+                                <i class="fas fa-download mr-2"></i>Download PDF
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -360,6 +413,11 @@ $initials_text = initials($displayName);
                                     <span class="status-badge status-<?= $selectedOrder['order_status'] ?> inline-block mt-1">
                                         <?= ucwords(str_replace('_', ' ', $selectedOrder['order_status'])) ?>
                                     </span>
+                                    <?php if (!empty($selectedOrder['delivery_man_id']) && in_array($selectedOrder['order_status'], ['out_for_delivery', 'delivered'])): ?>
+                                        <a href="./chat.php?rider=<?= $selectedOrder['delivery_man_id'] ?>" class="ml-2 inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition shadow-sm" title="Chat with Delivery Man">
+                                            <i class="fas fa-user"></i>
+                                        </a>
+                                    <?php endif; ?>
                                 </p>
                             </div>
                         </div>
@@ -459,11 +517,39 @@ $initials_text = initials($displayName);
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="mt-8 pt-6 border-t-2 border-gray-300 text-center">
+                </div>
+            </div>
+            
+            <!-- Review Section - Outside Print Area -->
+            <div class="no-print mt-8 bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div class="p-8 text-center">
+                    <?php if ($selectedOrder['order_status'] === 'delivered'): ?>
+                        <div>
+                            <?php
+                            // Check if order has been reviewed
+                            $stmt = $conn->prepare("SELECT review_id FROM order_reviews WHERE order_id = ?");
+                            $stmt->bind_param("i", $selectedOrder['order_id']);
+                            $stmt->execute();
+                            $hasReview = $stmt->get_result()->num_rows > 0;
+                            $stmt->close();
+                            ?>
+                            <?php if ($hasReview): ?>
+                                <p class="text-green-600 font-semibold mb-4">
+                                    <i class="fas fa-check-circle"></i> You have reviewed this order
+                                </p>
+                                <button onclick="openReviewModal(<?= $selectedOrder['order_id'] ?>)" class="inline-block bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition">
+                                    <i class="fas fa-edit mr-2"></i>Edit Review
+                                </button>
+                            <?php else: ?>
+                                <p class="text-gray-700 font-semibold mb-4">Thank you for your order!</p>
+                                <button onclick="openReviewModal(<?= $selectedOrder['order_id'] ?>)" class="inline-block bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-8 rounded-lg transition shadow-lg">
+                                    <i class="fas fa-star mr-2"></i>Write a Review
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
                         <p class="text-gray-700 font-semibold">Thank you for your order!</p>
-                        <p class="text-gray-600 mt-2">For any queries, please contact us at <span class="text-red-600 font-bold">support@foodwave.com</span></p>
-                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
             
@@ -482,16 +568,17 @@ $initials_text = initials($displayName);
                     <i class="fas fa-file-invoice text-gray-300 text-6xl mb-4"></i>
                     <h2 class="text-2xl font-bold text-gray-800 mb-2">No Orders Yet</h2>
                     <p class="text-gray-600 mb-6">You haven't placed any orders. Start ordering delicious food!</p>
-                    <div class="flex gap-4 justify-center">
-                        <a href="./khans.php" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                            <i class="fas fa-utensils mr-2"></i>Browse Khans
-                        </a>
-                        <a href="./olympia.php" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-                            <i class="fas fa-utensils mr-2"></i>Browse Olympia
-                        </a>
-                        <a href="./neptune.php" class="px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition">
-                            <i class="fas fa-utensils mr-2"></i>Browse Neptune
-                        </a>
+                    <div class="flex gap-4 justify-center flex-wrap">
+                        <?php foreach ($shops as $index => $shop): 
+                            $colors = ['bg-blue-600 hover:bg-blue-700', 'bg-green-600 hover:bg-green-700', 'bg-yellow-600 hover:bg-yellow-700', 'bg-purple-600 hover:bg-purple-700'];
+                            $btnColor = $colors[$index % count($colors)];
+                            $isLegacy = in_array($shop['name'], ['khans', 'olympia', 'neptune']);
+                            $shopUrl = $isLegacy ? "./" . htmlspecialchars($shop['name']) . ".php" : "./shop.php?name=" . urlencode($shop['name']);
+                        ?>
+                            <a href="<?= $shopUrl ?>" class="px-6 py-3 <?= $btnColor ?> text-white rounded-lg transition">
+                                <i class="fas fa-utensils mr-2"></i>Browse <?= htmlspecialchars($shop['display_name']) ?>
+                            </a>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             <?php else: ?>
@@ -556,6 +643,33 @@ $initials_text = initials($displayName);
                                             <span class="status-badge status-<?= $order['order_status'] ?> shadow-md">
                                                 <?= ucwords(str_replace('_', ' ', $order['order_status'])) ?>
                                             </span>
+                                            <?php if (!empty($order['delivery_man_id']) && in_array($order['order_status'], ['out_for_delivery', 'delivered'])): ?>
+                                                <div class="mt-2 inline-block">
+                                                    <a href="./chat.php?rider=<?= $order['delivery_man_id'] ?>" class="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition shadow-sm" title="Chat with Delivery Man">
+                                                        <i class="fas fa-user"></i>
+                                                    </a>
+                                                </div>
+                                            <?php endif; ?>
+                                            <?php if ($order['order_status'] === 'delivered'): ?>
+                                                <?php
+                                                $stmt = $conn->prepare("SELECT review_id FROM order_reviews WHERE order_id = ?");
+                                                $stmt->bind_param("i", $order['order_id']);
+                                                $stmt->execute();
+                                                $reviewed = $stmt->get_result()->num_rows > 0;
+                                                $stmt->close();
+                                                ?>
+                                                <div class="mt-2">
+                                                    <?php if ($reviewed): ?>
+                                                        <span class="text-xs text-green-600 font-semibold">
+                                                            <i class="fas fa-check-circle"></i> Reviewed
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <button onclick="openReviewModal(<?= $order['order_id'] ?>)" class="text-xs text-red-600 hover:text-red-700 font-semibold">
+                                                            <i class="fas fa-star"></i> Write Review
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="px-6 py-5 text-center">
                                             <a href="?order_id=<?= $order['order_id'] ?>" 
@@ -582,6 +696,25 @@ $initials_text = initials($displayName);
         <?php endif; ?>
     </main>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="review-modal">
+        <div class="review-modal-content">
+            <div class="review-modal-header">
+                <span class="review-modal-close" onclick="closeReviewModal()">&times;</span>
+                <h2 id="reviewModalTitle">Write a Review</h2>
+            </div>
+            <div class="review-modal-body" id="reviewModalBody">
+                <div class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+                    <p class="mt-2 text-gray-600">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Profile menu toggle
         document.getElementById('profileBtn').addEventListener('click', function(e) {
@@ -592,6 +725,171 @@ $initials_text = initials($displayName);
         document.addEventListener('click', function() {
             document.getElementById('profileMenu').classList.remove('show');
         });
+
+        // PDF Download function
+        function downloadPDF() {
+            const element = document.querySelector('.print-area');
+            
+            // Temporarily add compact class for PDF generation
+            element.classList.add('pdf-compact');
+            
+            const opt = {
+                margin: [3, 3, 3, 3],
+                filename: 'Invoice_<?= htmlspecialchars($selectedOrder ? $selectedOrder['order_number'] : 'Order') ?>.pdf',
+                image: { type: 'jpeg', quality: 0.92 },
+                html2canvas: { 
+                    scale: 1.2,
+                    useCORS: true,
+                    logging: false,
+                    scrollY: 0,
+                    scrollX: 0,
+                    windowHeight: element.scrollHeight
+                },
+                jsPDF: { 
+                    orientation: 'portrait', 
+                    unit: 'mm', 
+                    format: 'a4',
+                    compress: true
+                },
+                pagebreak: { mode: 'avoid-all' }
+            };
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Remove compact class after PDF generation
+                element.classList.remove('pdf-compact');
+            });
+        }
+            document.getElementById('profileMenu').classList.remove('show');
+        ;
+        
+        // Toast notification functions
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.className = 'toast ' + type;
+            toast.innerHTML = `
+                <span class="toast-icon">${type === 'success' ? '✓' : '✗'}</span>
+                <span>${message}</span>
+                <span class="toast-close" onclick="hideToast()">×</span>
+            `;
+            toast.classList.add('show');
+            setTimeout(hideToast, 3500);
+        }
+        
+        function hideToast() {
+            document.getElementById('toast').classList.remove('show');
+        }
+        
+        // Review Modal Functions
+        function openReviewModal(orderId) {
+            const modal = document.getElementById('reviewModal');
+            const modalBody = document.getElementById('reviewModalBody');
+            
+            // Show loading
+            modalBody.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+                    <p class="mt-2 text-gray-600">Loading...</p>
+                </div>
+            `;
+            
+            modal.classList.add('show');
+            
+            // Fetch order details and review form
+            fetch(`write_review.php?action=review&order_id=${orderId}&ajax=1`)
+                .then(res => res.text())
+                .then(html => {
+                    // Extract form content from the response
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const form = doc.querySelector('form');
+                    
+                    if (form) {
+                        modalBody.innerHTML = form.outerHTML;
+                        initStarRating();
+                        
+                        // Handle form submission
+                        const reviewForm = modalBody.querySelector('form');
+                        reviewForm.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            submitReview(this);
+                        });
+                    } else {
+                        modalBody.innerHTML = '<div class="text-center py-8 text-gray-600">Order not found or not eligible for review.</div>';
+                    }
+                })
+                .catch(err => {
+                    modalBody.innerHTML = '<div class="text-center py-8 text-red-600">Error loading review form. Please try again.</div>';
+                });
+        }
+        
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.remove('show');
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(e) {
+            const modal = document.getElementById('reviewModal');
+            if (e.target === modal) {
+                closeReviewModal();
+            }
+        });
+        
+        // Initialize star rating
+        function initStarRating() {
+            document.querySelectorAll('.star-rating').forEach(container => {
+                const stars = container.querySelectorAll('.star-btn');
+                
+                stars.forEach(star => {
+                    star.addEventListener('click', function() {
+                        const rating = parseInt(this.dataset.rating);
+                        const field = this.dataset.field;
+                        
+                        // Update hidden input
+                        const input = document.getElementById(field) || document.getElementById(field.replace(/\[|\]/g, '_').replace(/__/g, '_'));
+                        if (input) {
+                            input.value = rating;
+                        }
+                        
+                        // Update visual stars
+                        stars.forEach((s, index) => {
+                            if (index < rating) {
+                                s.classList.add('active');
+                            } else {
+                                s.classList.remove('active');
+                            }
+                        });
+                    });
+                });
+            });
+        }
+        
+        // Submit review via AJAX
+        function submitReview(form) {
+            const formData = new FormData(form);
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+            
+            fetch('write_review.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.text())
+            .then(data => {
+                showToast('Thank you for your review!', 'success');
+                closeReviewModal();
+                
+                // Reload page after 1 second
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            })
+            .catch(err => {
+                showToast('Error submitting review. Please try again.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+            });
+        }
     </script>
 </body>
 </html>

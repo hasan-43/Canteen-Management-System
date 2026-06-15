@@ -96,7 +96,9 @@ if ($viewInvoice && $selectedOrder) {
     ?>
     <!DOCTYPE html>
     <html lang="en">
-    <head>
+    <HEAD>
+    <script src="../resources/js/theme.js"></script>
+    <script src="../resources/js/theme.js"></script>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Invoice - Order #<?= htmlspecialchars($selectedOrder['order_number']) ?></title>
@@ -107,15 +109,24 @@ if ($viewInvoice && $selectedOrder) {
                 .no-print { display: none; }
                 body { background: white; }
             }
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            #invoice-content {
+                max-width: 800px;
+                margin: 0 auto;
+                background: white;
+            }
         </style>
     </head>
-    <body class="m-0 p-0">
-        <div class="max-w-4xl mx-auto bg-white">
+    <body>
+        <div id="invoice-content">
             <!-- Header -->
             <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-8">
                 <div class="flex justify-between items-start">
                     <div>
-                        <h1 class="text-4xl font-extrabold mb-2" style="margin: 0;">FOOD WAVE</h1>
+                        <h1 class="text-4xl font-extrabold mb-2" style="margin: 0;">CAMPUS CRAVINGS</h1>
                         <p class="text-red-100" style="margin: 5px 0 0 0;">Delivery Invoice</p>
                     </div>
                     <div class="text-right">
@@ -208,8 +219,7 @@ if ($viewInvoice && $selectedOrder) {
 
             <!-- Footer -->
             <div class="bg-gray-50 p-6 text-center text-sm text-gray-600 border-t" style="border-top: 1px solid #e5e7eb;">
-                <p class="mb-2" style="margin: 0 0 8px 0;">Thank you for choosing Food Wave!</p>
-                <p style="margin: 0;">For any queries, please contact us at support@foodwave.com</p>
+                <p class="mb-2" style="margin: 0 0 8px 0;">Thank you for choosing Campus Cravings!</p>
             </div>
 
             <!-- Action Buttons -->
@@ -227,13 +237,25 @@ if ($viewInvoice && $selectedOrder) {
 
             <script>
                 function downloadPDF() {
-                    const element = document.querySelector('.max-w-4xl');
+                    const element = document.getElementById('invoice-content');
                     const opt = {
-                        margin: 10,
+                        margin: [10, 10, 10, 10],
                         filename: 'Invoice_Order_<?= htmlspecialchars($selectedOrder['order_number']) ?>.pdf',
                         image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2 },
-                        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+                        html2canvas: { 
+                            scale: 2,
+                            useCORS: true,
+                            logging: false,
+                            scrollY: 0,
+                            scrollX: 0
+                        },
+                        jsPDF: { 
+                            orientation: 'portrait', 
+                            unit: 'mm', 
+                            format: 'a4',
+                            compress: true
+                        },
+                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
                     };
                     html2pdf().set(opt).from(element).save();
                 }

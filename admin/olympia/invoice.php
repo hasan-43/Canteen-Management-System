@@ -105,7 +105,9 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 ?>
 <!doctype html>
 <html lang="en">
-<head>
+<HEAD>
+    <script src="../../resources/js/theme.js"></script>
+    <script src="../../resources/js/theme.js"></script>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 	<title>Olympia Kitchen - Invoices</title>
@@ -145,15 +147,13 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 				gap: 1rem;
 			}
 		}
-		.food-wave {
-			font-weight: 900;
-			letter-spacing: 3px;
-			font-size: 2.4rem;
-			background: linear-gradient(90deg, #ff0000);
-			-webkit-background-clip: text;
-			background-clip: text;
-			-webkit-text-fill-color: transparent;
-			display: inline-block;
+		.campus-cravings-logo {
+			height: 50px;
+			width: auto;
+			transition: transform 0.3s ease;
+		}
+		.campus-cravings-logo:hover {
+			transform: scale(1.05);
 		}
 		.initials-circle {
 			width: 42px;
@@ -279,13 +279,22 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 			padding: 1rem 1.25rem;
 			box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 		}
-	</style>
+	
+        /* Standardized header dark glassmorphism and text logo */
+        header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(10, 10, 12, 0.9) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        .logo-section a { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .brand-text { font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.05em; transition: color 0.3s ease; }
+        .logo-section a:hover .brand-text { color: #ef4444; }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
 	<header class="h-16 flex items-center">
 		<div class="relative h-full w-full max-w-7xl mx-auto px-4">
 			<div class="logo-section">
-				<h2 class="food-wave">Food Wave</h2>
+				<a href="./navbar.php">
+					<img src="../../resources/logo.jpg" alt="Campus Cravings" class="campus-cravings-logo" />
+                    <span class="brand-text">Campus Cravings</span>
+				</a>
 			</div>
 
 			<nav class="nav-buttons">
@@ -482,6 +491,7 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 		<?php endif; ?>
 	</main>
 
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 	<script>
 		// Profile dropdown
 		const profileBtn = document.getElementById('profileBtn');
@@ -494,21 +504,124 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 			profileMenu.classList.remove('show');
 		});
 
-		// Print single invoice
+		// Download invoice as HD 3D colorful PDF
 		function printInvoice(orderId) {
-			const card = document.getElementById('invoice-' + orderId);
-			if (!card) return;
+			const originalCard = document.getElementById('invoice-' + orderId);
+			if (!originalCard) return;
 
-			const printWindow = window.open('', 'PRINT', 'height=800,width=800');
-			printWindow.document.write('<html><head><title>Invoice #' + orderId + '</title>');
-			printWindow.document.write('<style>body{font-family:Arial,sans-serif;padding:20px;background:#f8fafc;color:#0f172a;}h2{margin:0 0 10px;} .section{margin-bottom:16px;} .row{display:flex;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding:6px 0;} .row:last-child{border-bottom:none;} .badge{background:#22c55e;color:#fff;padding:4px 10px;border-radius:12px;font-weight:600;} .totals{font-weight:700;} </style>');
-			printWindow.document.write('</head><body>');
-			printWindow.document.write(card.innerHTML);
-			printWindow.document.write('</body></html>');
-			printWindow.document.close();
-			printWindow.focus();
-			printWindow.print();
-			printWindow.close();
+			// Get order data
+			const orderNumber = originalCard.querySelector('.order-header h3').textContent;
+			const customerName = originalCard.querySelector('.order-header p').textContent;
+			const phone = originalCard.querySelectorAll('.order-header p')[1]?.textContent || '';
+			const orderDate = originalCard.querySelector('.order-header .text-right p:last-child').textContent;
+			
+			// Create a colorful HD 3D invoice HTML
+			const invoiceHTML = `
+				<div style="font-family: 'Arial', sans-serif; max-width: 800px; margin: 0; background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); padding: 10px; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+					<!-- Header -->
+					<div style="background: white; padding: 18px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+						<div style="text-align: center; margin-bottom: 15px;">
+							<h1 style="color: #10b981; font-size: 30px; margin: 0; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(16,185,129,0.3);">Campus Cravings</h1>
+							<p style="color: #059669; font-size: 16px; margin: 3px 0 0 0; font-weight: 600;">Olympia Kitchen</p>
+						</div>
+						<div style="border-top: 3px solid #10b981; padding-top: 15px;">
+							<h2 style="color: #333; font-size: 24px; margin: 0 0 10px 0;">${orderNumber}</h2>
+							<div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+								<div>
+									<p style="margin: 5px 0; color: #555;"><strong style="color: #10b981;">Customer:</strong> ${customerName}</p>
+									${phone ? `<p style="margin: 5px 0; color: #555;"><strong style="color: #10b981;">Phone:</strong> ${phone}</p>` : ''}
+								</div>
+								<div style="text-align: right;">
+									<span style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(16,185,129,0.4);">DELIVERED</span>
+									<p style="margin: 10px 0 0 0; color: #555; font-size: 14px;">${orderDate}</p>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Items Section -->
+					<div style="background: white; padding: 18px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+						<h3 style="color: #10b981; font-size: 18px; margin: 0 0 12px 0; border-bottom: 2px solid #10b981; padding-bottom: 8px;">Order Items</h3>
+						<div style="margin-bottom: 15px;">
+							${Array.from(originalCard.querySelectorAll('.item-row')).map(item => {
+								const name = item.querySelector('.font-semibold').textContent;
+								const details = item.querySelector('.text-sm').textContent;
+								const price = item.querySelector('.font-bold').textContent;
+								return `
+									<div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+										<div>
+											<p style="margin: 0; font-weight: bold; color: #333; font-size: 16px;">${name}</p>
+											<p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">${details}</p>
+										</div>
+										<div style="font-weight: bold; color: #10b981; font-size: 16px;">${price}</div>
+									</div>
+								`;
+							}).join('')}
+						</div>
+
+						<!-- Totals -->
+						<div style="margin-top: 20px; padding-top: 15px; border-top: 3px solid #10b981;">
+							<div style="display: flex; justify-content: space-between; margin: 10px 0;">
+								<span style="color: #666; font-size: 16px;">Subtotal:</span>
+								<span style="font-weight: bold; color: #333; font-size: 16px;">${originalCard.querySelector('.border-t-2 .flex:nth-child(1) .font-semibold').textContent}</span>
+							</div>
+							<div style="display: flex; justify-content: space-between; margin: 10px 0;">
+								<span style="color: #666; font-size: 16px;">Delivery Fee:</span>
+								<span style="font-weight: bold; color: #10b981; font-size: 16px;">${originalCard.querySelector('.border-t-2 .flex:nth-child(2) .font-semibold, .border-t-2 .flex:nth-child(2) .text-green-600').textContent}</span>
+							</div>
+							<div style="display: flex; justify-content: space-between; margin: 15px 0 0 0; padding-top: 15px; border-top: 2px dashed #10b981;">
+								<span style="color: #10b981; font-size: 20px; font-weight: bold;">Total:</span>
+								<span style="color: #047857; font-size: 24px; font-weight: bold;">${originalCard.querySelector('.text-sky-700 span:last-child').textContent}</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Delivery & Payment Info -->
+					<div style="background: white; padding: 18px; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+						<h3 style="color: #10b981; font-size: 18px; margin: 0 0 12px 0; border-bottom: 2px solid #10b981; padding-bottom: 8px;">Delivery & Payment Details</h3>
+						<div style="margin-bottom: 15px;">
+							<p style="color: #10b981; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">Delivery Address:</p>
+							<p style="color: #333; margin: 0; font-size: 15px; line-height: 1.5;">${originalCard.querySelector('.space-y-3 > div:nth-child(1) p:last-child').innerHTML}</p>
+						</div>
+						<div style="margin-bottom: 15px;">
+							<p style="color: #10b981; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">Payment Method:</p>
+							<p style="color: #333; margin: 0; font-size: 15px;">${originalCard.querySelector('.space-y-3 > div:nth-child(2) p:last-child').textContent}</p>
+						</div>
+						${originalCard.querySelector('.space-y-3 > div:nth-child(3)') ? `
+							<div>
+								<p style="color: #10b981; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">Special Instructions:</p>
+								<p style="color: #333; margin: 0; font-size: 15px; line-height: 1.5;">${originalCard.querySelector('.space-y-3 > div:nth-child(3) p:last-child').innerHTML}</p>
+							</div>
+						` : ''}
+					</div>
+
+					<!-- Footer -->
+					<div style="text-align: center; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.15); border-radius: 10px;">
+						<p style="color: white; margin: 0; font-size: 13px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">Thank you for choosing Campus Cravings - Olympia Kitchen!</p>
+						<p style="color: rgba(255,255,255,0.9); margin: 3px 0 0 0; font-size: 11px;">For inquiries, please contact us at support@foodwave.com</p>
+					</div>
+				</div>
+			`;
+
+			// Create temporary element
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = invoiceHTML;
+			document.body.appendChild(tempDiv);
+
+			// PDF options for single page
+			const options = {
+				margin: 0,
+				filename: `Invoice_${orderNumber.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+				image: { type: 'jpeg', quality: 0.98 },
+				html2canvas: { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
+				jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+				pagebreak: { mode: 'avoid-all' }
+			};
+
+			// Generate and download PDF
+			html2pdf().set(options).from(tempDiv).save().then(() => {
+				document.body.removeChild(tempDiv);
+			});
 		}
 	</script>
 </body>

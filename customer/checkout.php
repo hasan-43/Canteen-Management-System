@@ -11,7 +11,16 @@ if (!isset($_SESSION['user_id'])) {
 $customerId = (int)$_SESSION['user_id'];
 $kitchen = isset($_POST['kitchen']) ? $_POST['kitchen'] : (isset($_GET['kitchen']) ? $_GET['kitchen'] : '');
 
-if (!in_array($kitchen, ['khans', 'olympia', 'neptune'])) {
+// Fetch allowed kitchens dynamically
+$allowedTables = [];
+$shopResult = $conn->query("SELECT shop_name FROM shop");
+if ($shopResult) {
+    while ($row = $shopResult->fetch_assoc()) {
+        $allowedTables[] = $row['shop_name'];
+    }
+}
+
+if (!in_array($kitchen, $allowedTables, true)) {
     header("Location: cart.php");
     exit();
 }
@@ -97,7 +106,7 @@ function fw_ensure_order_tables($conn) {
             order_id INT AUTO_INCREMENT PRIMARY KEY,
             order_number VARCHAR(50) NOT NULL UNIQUE,
             customer_id INT NOT NULL,
-            kitchen ENUM('khans','olympia','neptune') NOT NULL,
+            kitchen VARCHAR(50) NOT NULL,
             phone_number VARCHAR(20) NOT NULL,
             delivery_address TEXT NOT NULL,
             payment_method ENUM('cash_on_delivery','mobile_banking','card') NOT NULL DEFAULT 'cash_on_delivery',
@@ -138,18 +147,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $deliveryAddress = trim($_POST['delivery_address'] ?? '');
-    $phoneNumber = trim($_POST['phone_number'] ?? '');
     $paymentMethod = $_POST['payment_method'] ?? '';
     $specialInstructions = trim($_POST['special_instructions'] ?? '');
     
     $debugInfo[] = "Delivery Address: " . ($deliveryAddress ? 'Provided' : 'Empty');
-    $debugInfo[] = "Phone Number: " . ($phoneNumber ? 'Provided' : 'Empty');
     $debugInfo[] = "Payment Method: " . ($paymentMethod ? $paymentMethod : 'Not selected');
     
     if (empty($deliveryAddress)) {
         $orderMessage = 'Please enter delivery address';
-    } elseif (empty($phoneNumber)) {
-        $orderMessage = 'Please enter your phone number for order contact';
     } elseif (!in_array($paymentMethod, ['cash_on_delivery', 'mobile_banking', 'card'])) {
         $orderMessage = 'Please select a payment method';
     } else {
@@ -187,11 +192,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 $debugInfo[] = "Generated order number: $orderNumber";
                 
                 $stmt = $conn->prepare("
-                    INSERT INTO orders (order_number, customer_id, kitchen, phone_number, delivery_address, payment_method, 
+                    INSERT INTO orders (order_number, customer_id, kitchen, delivery_address, payment_method, 
                                        special_instructions, subtotal, delivery_fee, total_amount, order_status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
                 ");
-                $stmt->bind_param("sisssssddd", $orderNumber, $customerId, $kitchen, $phoneNumber, $deliveryAddress, 
+                $stmt->bind_param("sissssddd", $orderNumber, $customerId, $kitchen, $deliveryAddress, 
                                 $paymentMethod, $specialInstructions, $subtotal, $deliveryFee, $total);
                 
                 if (!$stmt->execute()) {
@@ -274,8 +279,9 @@ $initials_text = initials($displayName);
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="../resources/js/theme.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout - <?= ucfirst($kitchen) ?> Kitchen - Food Wave</title>
+    <title>Checkout - <?= ucfirst($kitchen) ?> Kitchen - Campus Cravings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -322,28 +328,22 @@ $initials_text = initials($displayName);
             z-index: -1;
         }
         
-        .food-wave {
-            font-weight: 900;
-            letter-spacing: 3px;
-            font-size: 2.4rem;
-            background: linear-gradient(90deg, #ff0000);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: fadeOpenClose 3s ease-in-out infinite;
-            display: inline-block;
+        header { position: sticky; top: 0; z-index: 50; background: rgba(10, 10, 12, 0.9) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        header a { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .brand-text { font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.05em; transition: color 0.3s ease; }
+        header a:hover .brand-text { color: #ef4444; }
+        .campus-cravings-logo {
+            height: 50px;
+            width: auto;
+            transition: transform 0.3s ease;
         }
-        
-        @keyframes fadeOpenClose {
-            0%   { opacity:0; transform: scale(0.6); }
-            25%  { opacity:1; transform: scale(1); }
-            75%  { opacity:1; transform: scale(1); }
-            100% { opacity:0; transform: scale(0.6); }
+        .campus-cravings-logo:hover {
+            transform: scale(1.05);
         }
         
         .nav-buttons { display: flex; align-items: center; gap: 0.75rem; }
-        .nav-link { padding: 0.5rem 0.9rem; border-radius: 0.5rem; font-weight: 600; color: #111827; }
-        .nav-link:hover { background-color: rgba(248,113,113,0.12); color: #b91c1c; }
+        .nav-link { padding: 0.5rem 0.9rem; border-radius: 0.5rem; font-weight: 600; color: #ffffff; }
+        .nav-link:hover { background-color: rgba(239, 68, 68, 0.2); color: #fca5a5; }
         
         .initials-circle { 
             width: 42px; height: 42px; border-radius: 9999px; 
@@ -432,9 +432,12 @@ $initials_text = initials($displayName);
 
 <body class="min-h-screen">
     <!-- Header/Navbar -->
-    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200">
+    <header>
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
-            <div class="food-wave">Food Wave</div>
+            <a href="./navbar.php">
+                <img src="../resources/logo.jpg" alt="Campus Cravings" class="campus-cravings-logo" />
+                <span class="brand-text">Campus Cravings</span>
+            </a>
             
             <nav class="nav-buttons text-sm">
                 <a href="./navbar.php" class="nav-link">Home</a>
@@ -514,17 +517,15 @@ $initials_text = initials($displayName);
                             
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Phone Number <span class="text-red-600">*</span>
+                                    Phone Number
                                 </label>
                                 <input type="text" 
                                        name="phone_number"
                                        id="phone_number"
                                        value="<?= htmlspecialchars($customerInfo['phone'] ?? '') ?>" 
-                                       required
                                        placeholder="Enter your contact number (e.g., 01712345678)"
-                                       class="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200" oninput="validatePhone()">
-                                <p class="text-xs text-gray-600 mt-1">We'll use this number to contact you about your order</p>
-                                <span id="phoneError" class="text-red-600 text-xs hidden">Please enter a valid phone number (min 10 digits)</span>
+                                       class="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                                <p class="text-xs text-gray-600 mt-1">Optional - We'll use this number to contact you about your order</p>
                             </div>
                             
                             <div>
@@ -665,30 +666,11 @@ $initials_text = initials($displayName);
     </main>
 
     <script>
-        // Phone validation
-        function validatePhone() {
-            const phone = document.getElementById('phone_number').value.trim();
-            const phoneError = document.getElementById('phoneError');
-            if (phone.length < 10) {
-                phoneError.classList.remove('hidden');
-                return false;
-            } else {
-                phoneError.classList.add('hidden');
-                return true;
-            }
-        }
-
         // Form validation on submit
         function validateCheckoutForm(event) {
-            const phone = document.getElementById('phone_number').value.trim();
             const address = document.getElementById('delivery_address').value.trim();
             const paymentMethod = document.querySelector('input[name="payment_method"]:checked');
 
-            if (!phone || phone.length < 10) {
-                alert('Please enter a valid phone number (at least 10 digits)');
-                event.preventDefault();
-                return false;
-            }
             if (!address) {
                 alert('Please enter a delivery address');
                 event.preventDefault();

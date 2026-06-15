@@ -9,7 +9,10 @@ if (!isset($_SESSION['usertype']) || $_SESSION['usertype'] !== 'admin' || !isset
 }
 
 $shopName = $_SESSION['shop'];
-$kitchenId = (stripos($shopName, 'khans') !== false) ? 'khans' : ((stripos($shopName, 'neptune') !== false) ? 'neptune' : 'olympia');
+$kitchenId = $_SESSION['shop_table'] ?? '';
+if (empty($kitchenId)) {
+    $kitchenId = (stripos($shopName, 'khans') !== false) ? 'khans' : ((stripos($shopName, 'neptune') !== false) ? 'neptune' : ((stripos($shopName, 'olympia') !== false) ? 'olympia' : 'general'));
+}
 
 $customer_id = $_GET['customer_id'] ?? null;
 $rider_id = $_GET['rider_id'] ?? null;
@@ -29,7 +32,7 @@ if ($customer_id) {
     $stmt->execute();
     $target = $stmt->get_result()->fetch_assoc();
 } else {
-    $stmt = $conn->prepare("SELECT fullname, username FROM delivery_man WHERE id = ?");
+    $stmt = $conn->prepare("SELECT fullname, username FROM delivery WHERE delivery_id = ?");
     $stmt->bind_param("i", $rider_id);
     $stmt->execute();
     $target = $stmt->get_result()->fetch_assoc();
@@ -42,7 +45,9 @@ $target_username = $target['username'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<HEAD>
+    <script src="../../resources/js/theme.js"></script>
+    <script src="../../resources/js/theme.js"></script>
     <meta charset="UTF-8">
     <title>Chat with <?= htmlspecialchars($target_name) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>

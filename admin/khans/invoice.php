@@ -105,7 +105,9 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 ?>
 <!doctype html>
 <html lang="en">
-<head>
+<HEAD>
+    <script src="../../resources/js/theme.js"></script>
+    <script src="../../resources/js/theme.js"></script>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 	<title>Khans Kitchen - Invoices</title>
@@ -145,15 +147,13 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 				gap: 1rem;
 			}
 		}
-		.food-wave {
-			font-weight: 900;
-			letter-spacing: 3px;
-			font-size: 2.4rem;
-			background: linear-gradient(90deg, #ff0000);
-			-webkit-background-clip: text;
-			background-clip: text;
-			-webkit-text-fill-color: transparent;
-			display: inline-block;
+		.campus-cravings-logo {
+			height: 50px;
+			width: auto;
+			transition: transform 0.3s ease;
+		}
+		.campus-cravings-logo:hover {
+			transform: scale(1.05);
 		}
 		.initials-circle {
 			width: 42px;
@@ -255,13 +255,22 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 			padding: 1rem 1.25rem;
 			box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 		}
-	</style>
+	
+        /* Standardized header dark glassmorphism and text logo */
+        header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(10, 10, 12, 0.9) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        .logo-section a { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .brand-text { font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.05em; transition: color 0.3s ease; }
+        .logo-section a:hover .brand-text { color: #ef4444; }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
 	<header class="h-16 flex items-center">
 		<div class="relative h-full w-full max-w-7xl mx-auto px-4">
 			<div class="logo-section">
-				<h2 class="food-wave">Food Wave</h2>
+				<a href="./navbar.php">
+					<img src="../../resources/logo.jpg" alt="Campus Cravings" class="campus-cravings-logo" />
+                    <span class="brand-text">Campus Cravings</span>
+				</a>
 			</div>
 
 			<nav class="nav-buttons">
@@ -478,12 +487,12 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 			
 			// Create a colorful invoice HTML
 			const invoiceHTML = `
-				<div style="font-family: 'Arial', sans-serif; max-width: 800px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px;">
+				<div style="font-family: 'Arial', sans-serif; max-width: 800px; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 10px; border-radius: 8px;">
 					<!-- Header -->
-					<div style="background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-						<div style="text-align: center; margin-bottom: 20px;">
-							<h1 style="color: #667eea; font-size: 36px; margin: 0; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Food Wave</h1>
-							<p style="color: #764ba2; font-size: 18px; margin: 5px 0 0 0; font-weight: 600;">Khans Kitchen</p>
+					<div style="background: white; padding: 18px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+						<div style="text-align: center; margin-bottom: 15px;">
+							<h1 style="color: #667eea; font-size: 30px; margin: 0; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Campus Cravings</h1>
+							<p style="color: #764ba2; font-size: 16px; margin: 3px 0 0 0; font-weight: 600;">Khans Kitchen</p>
 						</div>
 						<div style="border-top: 3px solid #667eea; padding-top: 15px;">
 							<h2 style="color: #333; font-size: 24px; margin: 0 0 10px 0;">${orderNumber}</h2>
@@ -501,8 +510,8 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 					</div>
 
 					<!-- Items Section -->
-					<div style="background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-						<h3 style="color: #667eea; font-size: 20px; margin: 0 0 15px 0; border-bottom: 2px solid #667eea; padding-bottom: 10px;">Order Items</h3>
+					<div style="background: white; padding: 18px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+						<h3 style="color: #667eea; font-size: 18px; margin: 0 0 12px 0; border-bottom: 2px solid #667eea; padding-bottom: 8px;">Order Items</h3>
 						<div style="margin-bottom: 15px;">
 							${Array.from(originalCard.querySelectorAll('.item-row')).map(item => {
 								const name = item.querySelector('.font-semibold').textContent;
@@ -538,8 +547,8 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 					</div>
 
 					<!-- Delivery & Payment Info -->
-					<div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-						<h3 style="color: #667eea; font-size: 20px; margin: 0 0 15px 0; border-bottom: 2px solid #667eea; padding-bottom: 10px;">Delivery & Payment Details</h3>
+					<div style="background: white; padding: 18px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+						<h3 style="color: #667eea; font-size: 18px; margin: 0 0 12px 0; border-bottom: 2px solid #667eea; padding-bottom: 8px;">Delivery & Payment Details</h3>
 						<div style="margin-bottom: 15px;">
 							<p style="color: #667eea; font-weight: bold; margin: 0 0 8px 0; font-size: 14px;">Delivery Address:</p>
 							<p style="color: #333; margin: 0; font-size: 15px; line-height: 1.5;">${originalCard.querySelector('.space-y-3 > div:nth-child(1) p:last-child').innerHTML}</p>
@@ -557,9 +566,9 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 					</div>
 
 					<!-- Footer -->
-					<div style="text-align: center; margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 12px;">
-						<p style="color: white; margin: 0; font-size: 14px;">Thank you for choosing Food Wave - Khans Kitchen!</p>
-						<p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0; font-size: 12px;">For inquiries, please contact us at support@foodwave.com</p>
+					<div style="text-align: center; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px;">
+						<p style="color: white; margin: 0; font-size: 13px;">Thank you for choosing Campus Cravings - Khans Kitchen!</p>
+						<p style="color: rgba(255,255,255,0.8); margin: 3px 0 0 0; font-size: 11px;">For inquiries, please contact us at support@foodwave.com</p>
 					</div>
 				</div>
 			`;
@@ -569,13 +578,14 @@ if ($revResult && $row = $revResult->fetch_assoc()) {
 			tempDiv.innerHTML = invoiceHTML;
 			document.body.appendChild(tempDiv);
 
-			// PDF options
+			// PDF options for single page
 			const options = {
-				margin: 10,
+				margin: 0,
 				filename: `Invoice_${orderNumber.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
 				image: { type: 'jpeg', quality: 0.98 },
-				html2canvas: { scale: 2, useCORS: true },
-				jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+				html2canvas: { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
+				jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+				pagebreak: { mode: 'avoid-all' }
 			};
 
 			// Generate and download PDF

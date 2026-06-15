@@ -100,7 +100,9 @@ if ($result && $result->num_rows > 0) {
 ?>
 <!doctype html>
 <html lang="en">
-<head>
+<HEAD>
+    <script src="../../resources/js/theme.js"></script>
+    <script src="../../resources/js/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Olympia Kitchen - Order Management</title>
@@ -140,15 +142,13 @@ if ($result && $result->num_rows > 0) {
                 gap: 1rem; 
             }
         }
-        .food-wave { 
-            font-weight: 900; 
-            letter-spacing: 3px; 
-            font-size: 2.4rem; 
-            background: linear-gradient(90deg, #ff0000); 
-            -webkit-background-clip: text; 
-            background-clip: text; 
-            -webkit-text-fill-color: transparent; 
-            display: inline-block; 
+        .campus-cravings-logo {
+            height: 50px;
+            width: auto;
+            transition: transform 0.3s ease;
+        }
+        .campus-cravings-logo:hover {
+            transform: scale(1.05);
         }
         .initials-circle { 
             width: 42px; 
@@ -317,6 +317,12 @@ if ($result && $result->num_rows > 0) {
             color: white;
             border-color: #ef4444;
         }
+    
+        /* Standardized header dark glassmorphism and text logo */
+        header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(10, 10, 12, 0.9) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        .logo-section a { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .brand-text { font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.05em; transition: color 0.3s ease; }
+        .logo-section a:hover .brand-text { color: #ef4444; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
@@ -324,7 +330,10 @@ if ($result && $result->num_rows > 0) {
     <header class="h-16 flex items-center">
         <div class="relative h-full w-full max-w-7xl mx-auto px-4">
             <div class="logo-section">
-                <h2 class="food-wave">Food Wave</h2>
+                <a href="./navbar.php">
+                    <img src="../../resources/logo.jpg" alt="Campus Cravings" class="campus-cravings-logo" />
+                    <span class="brand-text">Campus Cravings</span>
+                </a>
             </div>
 
             <nav class="nav-buttons">
@@ -533,5 +542,6 @@ if ($result && $result->num_rows > 0) {
             });
         });
     </script>
+    <script src="../../resources/js/notifications.js"></script>
 </body>
 </html>

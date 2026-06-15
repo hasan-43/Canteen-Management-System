@@ -9,12 +9,18 @@ if (!isset($_SESSION['usertype']) || $_SESSION['usertype'] !== 'admin' || !isset
 }
 
 $shopName = $_SESSION['shop'];
-$kitchenId = (stripos($shopName, 'khans') !== false) ? 'khans' : ((stripos($shopName, 'neptune') !== false) ? 'neptune' : 'olympia');
-$navbarLink = "../$kitchenId/navbar.php";
+$kitchenId = $_SESSION['shop_table'] ?? '';
+if (empty($kitchenId)) {
+    $kitchenId = (stripos($shopName, 'khans') !== false) ? 'khans' : ((stripos($shopName, 'neptune') !== false) ? 'neptune' : ((stripos($shopName, 'olympia') !== false) ? 'olympia' : 'general'));
+}
+$isLegacy = in_array($kitchenId, ['khans', 'olympia', 'neptune']);
+$navbarLink = $isLegacy ? "../$kitchenId/navbar.php" : "../general/navbar.php";
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<HEAD>
+    <script src="../../resources/js/theme.js"></script>
+    <script src="../../resources/js/theme.js"></script>
     <meta charset="UTF-8">
     <title>Messages - <?= htmlspecialchars($shopName) ?></title>
     <script src="https://cdn.tailwindcss.com"></script>

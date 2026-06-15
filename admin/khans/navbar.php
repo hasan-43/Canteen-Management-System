@@ -57,10 +57,12 @@ $initials = initials($displayName);
 ?>
 <!doctype html>
 <html lang="en">
-<head>
+<HEAD>
+    <script src="../../resources/js/theme.js"></script>
+    <script src="../../resources/js/theme.js"></script>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
-	<title>Home - Khans Admin - Food Wave</title>
+	<title>Home - Khans Admin - Campus Cravings</title>
 	<script src="https://cdn.tailwindcss.com"></script>
 	<style>
 		/* Hero background with slide transition */
@@ -104,25 +106,14 @@ $initials = initials($displayName);
 			z-index: 1;
 		}
 
-		/* Food Wave colorful gradient text */
-		.food-wave {
-			font-weight: 900;
-			letter-spacing: 3px;
-			font-size: 2.5rem;
-			background: linear-gradient(90deg, #ff0000);
-			-webkit-background-clip: text;
-			background-clip: text;
-			-webkit-text-fill-color: transparent;
-			animation: fadeOpenClose 3s ease-in-out infinite;
-			display: inline-block;
+		/* Campus Cravings logo styling */
+		.campus-cravings-logo {
+			height: 50px;
+			width: auto;
+			transition: transform 0.3s ease;
 		}
-
-		/* Fade in and out animation */
-		@keyframes fadeOpenClose {
-			0% { opacity: 0; transform: scale(0.5); }
-			30% { opacity: 1; transform: scale(1); }
-			70% { opacity: 1; transform: scale(1); }
-			100% { opacity: 0; transform: scale(0.5); }
+		.campus-cravings-logo:hover {
+			transform: scale(1.05);
 		}
 
 		/* Header fixed positioning */
@@ -203,7 +194,18 @@ $initials = initials($displayName);
 				gap: 1rem;
 			}
 		}
-	</style>
+	
+        .hero { min-height: 100vh; position: relative; overflow: hidden; }
+        .hero-bg { position: absolute; inset: 0; background-image: url('../../resources/Homepage/Home_HD.jpg'); background-size: cover; background-position: center; z-index: 0; animation: kenBurns 24s ease-in-out infinite; }
+        @keyframes kenBurns { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+    
+        /* Standardized header dark glassmorphism and text logo */
+        header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(10, 10, 12, 0.9) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        .logo-section a { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .brand-text { font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.05em; transition: color 0.3s ease; }
+        .logo-section a:hover .brand-text { color: #ef4444; }
+    </style>
 </head>
 <body class="bg-gray-900 text-white">
 	<!-- Header with Logo (left) and Profile (right) -->
@@ -211,7 +213,10 @@ $initials = initials($displayName);
 		<div class="relative h-16 max-w-7xl mx-auto px-4">
 			<!-- Logo left -->
 			<div class="logo-section">
-				<h2 class="food-wave">Food Wave</h2>
+				<a href="./navbar.php">
+					<img src="../../resources/logo.jpg" alt="Campus Cravings" class="campus-cravings-logo" />
+                    <span class="brand-text">Campus Cravings</span>
+				</a>
 			</div>
 
 			<!-- Nav buttons center (hidden on mobile) -->
@@ -272,30 +277,8 @@ $initials = initials($displayName);
 			});
 		})();
 
-		// Background slideshow - cycles through all images in Homepage folder
-		(function() {
-			const hero = document.getElementById('hero');
-			const images = <?= json_encode($bgImagesRel ?: [
-				'../../resources/Homepage/Home.jpg',
-				'../../resources/Homepage/Home1.jpg',
-				'../../resources/Homepage/Home2.jpg',
-				'../../resources/Homepage/Home3.jpg',
-				'../../resources/Homepage/Home4.jpg'
-			]) ?>;
-
-			images.forEach(src => { const img = new Image(); img.src = src; });
-
-			let i = 0;
-			if (images.length > 0) {
-				hero.style.backgroundImage = `url('${images[0]}')`;
-			}
-
-			setInterval(() => {
-				if (images.length === 0) return;
-				i = (i + 1) % images.length;
-				hero.style.backgroundImage = `url('${images[i]}')`;
-			}, 2000);
-		})();
+		// Slideshow JS disabled in favor of Ken Burns CSS animation
 	</script>
+	<script src="../../resources/js/notifications.js"></script>
 </body>
 </html>

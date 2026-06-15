@@ -39,7 +39,7 @@ if ($stmt) {
     $res_kit = $stmt->get_result();
     while ($k = $res_kit->fetch_assoc()) { 
         $kid = $k['kitchen'];
-        $name = ($kid == 'khans') ? 'Khans Kitchen' : (($kid == 'neptune') ? 'Neptune Kitchen' : 'Olympia Kitchen');
+        $name = ucwords(str_replace('_', ' ', $kid)) . ' Kitchen';
         $kitchens[] = ['id' => $kid, 'name' => $name]; 
     }
 }
@@ -58,17 +58,17 @@ if ($selected_customer) {
         if ($c_res) { $chat_name = $c_res['fullname']; $chat_icon = "👤"; }
     }
 } elseif ($selected_kitchen) {
-    if($selected_kitchen == 'khans') $chat_name = "Khans Kitchen";
-    elseif($selected_kitchen == 'olympia') $chat_name = "Olympia Kitchen";
-    else $chat_name = "Neptune Kitchen";
+    $chat_name = ucwords(str_replace('_', ' ', $selected_kitchen)) . ' Kitchen';
     $chat_icon = "🏠";
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<HEAD>
+    <script src="../resources/js/theme.js"></script>
+    <script src="../resources/js/theme.js"></script>
     <meta charset="UTF-8">
-    <title>Rider Chat - Food Wave</title>
+    <title>Rider Chat - Campus Cravings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>

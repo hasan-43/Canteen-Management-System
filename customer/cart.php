@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config/db_connection.php';
+require_once __DIR__ . '/../config/hd_helper.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -17,6 +18,62 @@ if (isset($_SESSION['flash_message'])) {
     $message = $_SESSION['flash_message'];
     $messageType = $_SESSION['flash_type'] ?? 'success';
     unset($_SESSION['flash_message'], $_SESSION['flash_type']);
+}
+
+function fw_get_kitchen_theme($kitchen) {
+    $themes = [
+        'khans' => [
+            'badge' => 'background: #dbeafe; color: #1e40af;',
+            'item_bg' => 'background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #3b82f6;',
+            'header_gradient' => 'from-blue-500 to-blue-600',
+            'border_class' => 'border-blue-500',
+            'checkout_gradient' => 'from-blue-600 to-blue-700'
+        ],
+        'olympia' => [
+            'badge' => 'background: #dcfce7; color: #166534;',
+            'item_bg' => 'background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 4px solid #10b981;',
+            'header_gradient' => 'from-green-500 to-green-600',
+            'border_class' => 'border-green-500',
+            'checkout_gradient' => 'from-green-600 to-green-700'
+        ],
+        'neptune' => [
+            'badge' => 'background: #fef3c7; color: #92400e;',
+            'item_bg' => 'background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 4px solid #f59e0b;',
+            'header_gradient' => 'from-yellow-500 to-yellow-600',
+            'border_class' => 'border-yellow-500',
+            'checkout_gradient' => 'from-yellow-600 to-yellow-700'
+        ]
+    ];
+    
+    $kitchen_lower = strtolower($kitchen);
+    if (isset($themes[$kitchen_lower])) {
+        return $themes[$kitchen_lower];
+    }
+    
+    return [
+        'badge' => 'background: #f3e8ff; color: #6b21a8;',
+        'item_bg' => 'background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-left: 4px solid #a855f7;',
+        'header_gradient' => 'from-purple-500 to-purple-600',
+        'border_class' => 'border-purple-500',
+        'checkout_gradient' => 'from-purple-600 to-purple-700'
+    ];
+}
+
+// Fetch all shops dynamically
+$shops = [];
+$allowedTables = [];
+$cartItemsByKitchen = [];
+$shopResult = $conn->query("SELECT shop_id, shop_name FROM shop ORDER BY shop_id");
+if ($shopResult) {
+    while ($row = $shopResult->fetch_assoc()) {
+        $shopName = $row['shop_name'];
+        $shops[] = [
+            'name'         => $shopName,
+            'display_name' => ucfirst($shopName) . ' Kitchen'
+        ];
+        $allowedTables[] = $shopName;
+        $cartItemsByKitchen[$shopName] = [];
+    }
 }
 
 // Handle quantity update
@@ -36,13 +93,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_quantity'])) {
 // Handle item removal
 if (isset($_GET['remove'])) {
     $itemId = (int)$_GET['remove'];
-    $stmt = $conn->prepare("DELETE FROM cart_items WHERE item_id = ? AND cart_id IN (SELECT cart_id FROM customer_cart WHERE customer_id = ?)");
+    $conn->begin_transaction();
+
+    $stmt = $conn->prepare("SELECT product_code, kitchen, quantity FROM cart_items WHERE item_id = ? AND cart_id IN (SELECT cart_id FROM customer_cart WHERE customer_id = ?) FOR UPDATE");
     $stmt->bind_param("ii", $itemId, $customerId);
-    if ($stmt->execute()) {
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $stmt->close();
+
+    if ($row) {
+        $kitchen = $row['kitchen'];
+        $productCode = $row['product_code'];
+        $qty = (int)$row['quantity'];
+
+        // only allow known kitchen tables
+        if (in_array($kitchen, $allowedTables, true)) {
+            $update = $conn->prepare("UPDATE `{$kitchen}` SET stock = stock + ? WHERE product_code = ?");
+            $update->bind_param("is", $qty, $productCode);
+            $update->execute();
+            $update->close();
+        }
+
+        $delete = $conn->prepare("DELETE FROM cart_items WHERE item_id = ? AND cart_id IN (SELECT cart_id FROM customer_cart WHERE customer_id = ?)");
+        $delete->bind_param("ii", $itemId, $customerId);
+        $delete->execute();
+        $delete->close();
+
+        $conn->commit();
         $message = "Item removed from cart";
         $messageType = "success";
+    } else {
+        $conn->rollback();
     }
-    $stmt->close();
+
     header("Location: cart.php");
     exit();
 }
@@ -59,11 +143,6 @@ if ($row = $result->fetch_assoc()) {
 $stmt->close();
 
 // Fetch cart items grouped by kitchen
-$cartItemsByKitchen = [
-    'khans' => [],
-    'olympia' => [],
-    'neptune' => []
-];
 
 if ($cartId) {
     $stmt = $conn->prepare("
@@ -132,8 +211,9 @@ $initials_text = initials($displayName);
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="../resources/js/theme.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping Cart - Food Wave</title>
+    <title>Shopping Cart - Campus Cravings</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -180,33 +260,23 @@ $initials_text = initials($displayName);
             z-index: -1;
         }
         
-        .food-wave {
-            font-weight: 900;
-            letter-spacing: 3px;
-            font-size: 2.4rem;
-            background: linear-gradient(90deg, #ff0000);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: fadeOpenClose 3s ease-in-out infinite;
-            display: inline-block;
+        .campus-cravings-logo {
+            height: 50px;
+            width: auto;
+            transition: transform 0.3s ease;
         }
-        
-        @keyframes fadeOpenClose {
-            0%   { opacity:0; transform: scale(0.6); }
-            25%  { opacity:1; transform: scale(1); }
-            75%  { opacity:1; transform: scale(1); }
-            100% { opacity:0; transform: scale(0.6); }
+        .campus-cravings-logo:hover {
+            transform: scale(1.05);
         }
         
         .nav-buttons { display: flex; align-items: center; gap: 0.75rem; }
-        .nav-link { padding: 0.5rem 0.9rem; border-radius: 0.5rem; font-weight: 600; color: #111827; }
-        .nav-link:hover { background-color: rgba(248,113,113,0.12); color: #b91c1c; }
+        .nav-link { padding: 0.5rem 0.9rem; border-radius: 0.5rem; font-weight: 600; color: #ffffff; }
+        .nav-link:hover { background-color: rgba(239, 68, 68, 0.2); color: #fca5a5; }
         .nav-dropdown { position: relative; }
         .nav-dropdown-menu { 
             position: absolute; left: 0; margin-top: 0.4rem; width: 12rem; 
-            background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem; 
-            box-shadow: 0 10px 25px -10px rgba(0,0,0,0.15); 
+            background: rgba(0, 0, 0, 0.9); border: 1px solid #374151; border-radius: 0.5rem; 
+            box-shadow: 0 10px 25px -10px rgba(0,0,0,0.5); 
             opacity: 0; transform: translateY(-4px) scale(0.98); 
             transition: all 0.15s ease; pointer-events: none; 
         }
@@ -214,9 +284,17 @@ $initials_text = initials($displayName);
             opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; 
         }
         .nav-dropdown-menu a { 
-            display: block; padding: 0.55rem 0.9rem; color: #111827; border-radius: 0.5rem; 
+            display: block; padding: 0.55rem 0.9rem; color: #ffffff; border-radius: 0.5rem; 
         }
-        .nav-dropdown-menu a:hover { background: #f3f4f6; }
+        .nav-dropdown-menu a:hover { background: #374151; }
+        
+        header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(10, 10, 12, 0.9) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+        .logo-section { position: absolute; left: 2rem; top: 50%; transform: translateY(-50%); }
+        .logo-section a { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .brand-text { font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.05em; transition: color 0.3s ease; }
+        .logo-section a:hover .brand-text { color: #ef4444; }
+        .profile-section { position: absolute; right: 2rem; top: 50%; transform: translateY(-50%); }
+        @media (min-width: 768px) { .nav-buttons { display: flex; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); gap: 1rem; } }
         
         .initials-circle { 
             width: 42px; height: 42px; border-radius: 9999px; 
@@ -270,45 +348,53 @@ $initials_text = initials($displayName);
     </style>
 </head>
 
-<body class="min-h-screen">
+<body class="bg-gray-900 text-white min-h-screen">
     <!-- Header/Navbar -->
-    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200">
-        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-6">
-            <div class="food-wave">Food Wave</div>
+    <header class="h-16">
+        <div class="relative h-full max-w-7xl mx-auto px-4">
+            <!-- Logo left -->
+            <div class="logo-section">
+                <a href="./navbar.php">
+                    <img src="../resources/logo.jpg" alt="Campus Cravings" class="campus-cravings-logo" />
+                    <span class="brand-text">Campus Cravings</span>
+                </a>
+            </div>
             
-            <nav class="nav-buttons text-sm">
-                <a href="./navbar.php" class="nav-link">Home</a>
-                <div class="nav-dropdown">
-                    <button class="nav-link">
-                        Shop <i class="fas fa-chevron-down ml-1 text-xs"></i>
-                    </button>
-                    <div class="nav-dropdown-menu">
-                        <a href="./khans.php">Khans Kitchen</a>
-                        <a href="./olympia.php">Olympia Kitchen</a>
-                        <a href="./neptune.php">Neptune Kitchen</a>
+            <!-- Nav buttons center -->
+            <nav class="nav-buttons">
+                <a href="./navbar.php" class="px-4 py-2 bg-transparent hover:bg-red-600 hover:bg-opacity-80 rounded text-sm text-white">Home</a>
+                <div class="relative group">
+                    <button class="px-4 py-2 rounded text-sm hover:bg-red-600 hover:bg-opacity-80 text-white">Shop</button>
+                    <div class="absolute left-0 mt-2 w-48 bg-black bg-opacity-90 border border-gray-800 rounded shadow-lg opacity-0 group-hover:opacity-100 transform scale-95 group-hover:scale-100 transition-all origin-top">
+                        <?php foreach ($shops as $shop): 
+                            $isLegacy = in_array($shop['name'], ['khans', 'olympia', 'neptune']);
+                            $shopUrl = $isLegacy ? "./" . htmlspecialchars($shop['name']) . ".php" : "./shop.php?name=" . urlencode($shop['name']);
+                        ?>
+                            <a href="<?= $shopUrl ?>" class="block px-4 py-2 hover:bg-gray-700 text-white"><?= htmlspecialchars($shop['display_name']) ?></a>
+                        <?php endforeach; ?>
                     </div>
                 </div>
-                <a href="./invoice.php" class="nav-link">Invoice</a>
-                <a href="./chat.php" class="px-4 py-2 rounded text-sm hover:bg-red-600 hover:bg-opacity-80">
+                <a href="./invoice.php" class="px-4 py-2 rounded text-sm hover:bg-red-600 hover:bg-opacity-80 text-white">Invoice</a>
+                <a href="./chat.php" class="px-4 py-2 rounded text-sm hover:bg-red-600 hover:bg-opacity-80 text-white">
                     <i class="fas fa-comments mr-1"></i> Chat
                 </a>
-                <a href="cart.php" class="nav-link">Cart</a>
+                <a href="cart.php" class="px-4 py-2 rounded text-sm hover:bg-red-600 hover:bg-opacity-80 text-white">Cart</a>
             </nav>
             
-            <div class="flex items-center gap-4">
+            <!-- Profile right -->
+            <div class="profile-section">
                 <div class="relative" id="profileRoot">
-                    <button id="profileBtn" class="flex items-center gap-2 hover:opacity-80 transition">
+                    <button id="profileBtn" class="flex items-center gap-2 p-1 rounded focus:outline-none hover:opacity-80 transition">
                         <?php if ($profilePic): ?>
                             <img src="<?= htmlspecialchars($profilePic) ?>" alt="Profile" class="w-10 h-10 rounded-full object-cover border-2 border-red-600">
                         <?php else: ?>
                             <div class="initials-circle"><?= htmlspecialchars($initials_text) ?></div>
                         <?php endif; ?>
+                        <span class="hidden sm:inline-block text-sm text-white"><?= htmlspecialchars($displayName) ?></span>
                     </button>
-                    <div id="profileMenu" class="profile-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                        <div class="px-4 py-2 border-b border-gray-200">
-                            <p class="font-semibold text-gray-800"><?= htmlspecialchars($displayName) ?></p>
-                        </div>
-                        <a href="./logout.php" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</a>
+                    <div id="profileMenu" class="profile-menu hidden absolute right-0 mt-2 w-48 bg-gray-900 bg-opacity-95 rounded-lg border border-gray-800 z-50">
+                        <a href="./profile.php" class="block px-4 py-2 text-gray-100 hover:bg-gray-800">Profile</a>
+                        <a href="./logout.php" class="block px-4 py-2 text-red-200 hover:bg-gray-800">Logout</a>
                     </div>
                 </div>
             </div>
@@ -316,13 +402,13 @@ $initials_text = initials($displayName);
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-8">
+    <main class="max-w-7xl mx-auto px-4 py-8 mt-16">
         <div class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+            <h1 class="text-3xl font-bold text-white flex items-center gap-3">
                 <i class="fas fa-shopping-cart text-red-600"></i>
                 Shopping Cart
             </h1>
-            <p class="text-gray-600 mt-2">Review your items before checkout</p>
+            <p class="text-gray-300 mt-2">Review your items before checkout</p>
         </div>
 
         <?php if ($message): ?>
@@ -339,15 +425,16 @@ $initials_text = initials($displayName);
                 <h2 class="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
                 <p class="text-gray-600 mb-6">Add some delicious items from our kitchens!</p>
                 <div class="flex gap-4 justify-center flex-wrap">
-                    <a href="./khans.php" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition shadow-lg">
-                        <i class="fas fa-utensils mr-2"></i>Khans Kitchen
-                    </a>
-                    <a href="./olympia.php" class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition shadow-lg">
-                        <i class="fas fa-utensils mr-2"></i>Olympia Kitchen
-                    </a>
-                    <a href="./neptune.php" class="px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition shadow-lg">
-                        <i class="fas fa-utensils mr-2"></i>Neptune Kitchen
-                    </a>
+                    <?php foreach ($shops as $index => $shop): 
+                        $colors = ['from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700', 'from-green-500 to-green-600 hover:from-green-600 hover:to-green-700', 'from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700', 'from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'];
+                        $btnColor = $colors[$index % count($colors)];
+                        $isLegacy = in_array($shop['name'], ['khans', 'olympia', 'neptune']);
+                        $shopUrl = $isLegacy ? "./" . htmlspecialchars($shop['name']) . ".php" : "./shop.php?name=" . urlencode($shop['name']);
+                    ?>
+                        <a href="<?= $shopUrl ?>" class="px-6 py-3 bg-gradient-to-r <?= $btnColor ?> text-white rounded-lg transition shadow-lg">
+                            <i class="fas fa-utensils mr-2"></i><?= htmlspecialchars($shop['display_name']) ?>
+                        </a>
+                    <?php endforeach; ?>
                 </div>
             </div>
         <?php else: ?>
@@ -357,10 +444,8 @@ $initials_text = initials($displayName);
                     <?php foreach ($cartItemsByKitchen as $kitchen => $items): ?>
                         <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
                             <!-- Kitchen Header -->
-                            <div class="bg-gradient-to-r <?php 
-                                echo $kitchen === 'khans' ? 'from-blue-500 to-blue-600' : 
-                                     ($kitchen === 'olympia' ? 'from-green-500 to-green-600' : 'from-yellow-500 to-yellow-600'); 
-                            ?> p-4">
+                            <?php $theme = fw_get_kitchen_theme($kitchen); ?>
+                            <div class="bg-gradient-to-r <?= $theme['header_gradient'] ?> p-4">
                                 <h2 class="text-xl font-bold text-white flex items-center gap-2">
                                     <i class="fas fa-store"></i>
                                     <?= ucfirst($kitchen) ?> Kitchen
@@ -370,19 +455,15 @@ $initials_text = initials($displayName);
                             
                             <!-- Items -->
                             <div class="p-4 space-y-4">
-                                <?php foreach ($items as $item): ?>
-                                    <div class="cart-item cart-item-<?= $kitchen ?> rounded-xl p-4 flex gap-4">
+                                <?php foreach ($items as $item): 
+                                    $theme = fw_get_kitchen_theme($kitchen);
+                                ?>
+                                    <div class="cart-item rounded-xl p-4 flex gap-4" style="<?= $theme['item_bg'] ?>">
                                         <!-- Product Image -->
                                         <div class="flex-shrink-0">
-                                            <?php if ($item['image']): ?>
-                                                <img src="../resources/<?= ucfirst($kitchen) ?>/<?= htmlspecialchars($item['image']) ?>" 
-                                                     alt="<?= htmlspecialchars($item['product_name']) ?>" 
-                                                     class="w-24 h-24 object-cover rounded-lg shadow-md">
-                                            <?php else: ?>
-                                                <div class="w-24 h-24 bg-gray-300 rounded-lg flex items-center justify-center">
-                                                    <i class="fas fa-utensils text-gray-500 text-2xl"></i>
-                                                </div>
-                                            <?php endif; ?>
+                                            <img src="<?= getHDProductImage($item['product_name'], $kitchen, $item['image']) ?>" 
+                                                 alt="<?= htmlspecialchars($item['product_name']) ?>" 
+                                                 class="w-24 h-24 object-cover rounded-lg shadow-md">
                                         </div>
                                         
                                         <!-- Product Details -->
@@ -390,7 +471,7 @@ $initials_text = initials($displayName);
                                             <div class="flex justify-between items-start mb-2">
                                                 <div>
                                                     <h3 class="font-bold text-gray-800 text-lg"><?= htmlspecialchars($item['product_name']) ?></h3>
-                                                    <span class="kitchen-badge badge-<?= $kitchen ?>"><?= ucfirst($kitchen) ?></span>
+                                                    <span class="kitchen-badge" style="<?= $theme['badge'] ?>"><?= ucfirst($kitchen) ?></span>
                                                 </div>
                                                 <a href="?remove=<?= $item['item_id'] ?>" 
                                                    class="text-red-600 hover:text-red-800 transition"
@@ -413,7 +494,7 @@ $initials_text = initials($displayName);
                                                         <input type="number" name="quantity" 
                                                                value="<?= $item['quantity'] ?>" 
                                                                min="1" max="99"
-                                                               class="w-16 text-center border-2 border-gray-300 rounded-lg px-2 py-1 font-semibold">
+                                                               class="w-16 text-center border-2 border-gray-300 rounded-lg px-2 py-1 font-semibold text-gray-800 bg-white">
                                                         <button type="button" onclick="increaseQty(this)" 
                                                                 class="quantity-btn bg-green-100 text-green-600 hover:bg-green-200">
                                                             <i class="fas fa-plus"></i>
@@ -436,20 +517,14 @@ $initials_text = initials($displayName);
                             </div>
                             
                             <!-- Kitchen Total -->
-                            <div class="bg-gray-100 p-4 border-t-2 <?php 
-                                echo $kitchen === 'khans' ? 'border-blue-500' : 
-                                     ($kitchen === 'olympia' ? 'border-green-500' : 'border-yellow-500'); 
-                            ?>">
+                            <div class="bg-gray-100 p-4 border-t-2 <?= $theme['border_class'] ?>">
                                 <div class="flex justify-between items-center">
                                     <span class="font-semibold text-gray-700"><?= ucfirst($kitchen) ?> Total:</span>
                                     <span class="text-xl font-bold text-gray-800">৳<?= number_format($kitchenTotals[$kitchen], 2) ?></span>
                                 </div>
                                 <form action="checkout.php" method="POST" class="mt-3">
                                     <input type="hidden" name="kitchen" value="<?= $kitchen ?>">
-                                    <button type="submit" class="w-full py-3 bg-gradient-to-r <?php 
-                                        echo $kitchen === 'khans' ? 'from-blue-600 to-blue-700' : 
-                                             ($kitchen === 'olympia' ? 'from-green-600 to-green-700' : 'from-yellow-600 to-yellow-700'); 
-                                    ?> text-white font-semibold rounded-lg hover:shadow-lg transition">
+                                    <button type="submit" class="w-full py-3 bg-gradient-to-r <?= $theme['checkout_gradient'] ?> text-white font-semibold rounded-lg hover:shadow-lg transition">
                                         <i class="fas fa-credit-card mr-2"></i>Checkout <?= ucfirst($kitchen) ?> Items
                                     </button>
                                 </form>
@@ -468,9 +543,11 @@ $initials_text = initials($displayName);
                         
                         <div class="space-y-3 mb-6">
                             <?php foreach ($kitchenTotals as $kitchen => $total): ?>
-                                <?php if ($total > 0): ?>
+                                <?php if ($total > 0): 
+                                    $theme = fw_get_kitchen_theme($kitchen);
+                                ?>
                                     <div class="flex justify-between items-center pb-2 border-b border-gray-200">
-                                        <span class="kitchen-badge badge-<?= $kitchen ?>"><?= ucfirst($kitchen) ?></span>
+                                        <span class="kitchen-badge" style="<?= $theme['badge'] ?>"><?= ucfirst($kitchen) ?></span>
                                         <span class="font-semibold text-gray-700">৳<?= number_format($total, 2) ?></span>
                                     </div>
                                 <?php endif; ?>

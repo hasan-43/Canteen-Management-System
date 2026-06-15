@@ -196,13 +196,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_profile'])) {
 $displayName = $_SESSION['fullname'] ?? $_SESSION['username'] ?? 'Customer';
 $profilePic = $_SESSION['profile_pic'] ?? ($profile['profile_pic'] ?? null);
 $initials = initials($displayName);
+
+$shops = [];
+$shopResult = $conn->query("SELECT shop_id, shop_name FROM shop ORDER BY shop_id");
+if ($shopResult) {
+    while ($row = $shopResult->fetch_assoc()) {
+        $shops[] = [
+            'name'         => $row['shop_name'],
+            'display_name' => ucfirst($row['shop_name']) . ' Kitchen',
+        ];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 		<meta charset="UTF-8">
+		<script src="../resources/js/theme.js"></script>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>My Profile - Food Wave</title>
+		<title>My Profile - Campus Cravings</title>
 		<script src="https://cdn.tailwindcss.com"></script>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 		<style>
@@ -236,10 +248,14 @@ $initials = initials($displayName);
 					z-index: -1;
 				}
 				.initials-circle { width: 64px; height: 64px; border-radius: 9999px; background: linear-gradient(135deg,#ef4444,#7f1d1d); display: inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:20px; }
-				.food-wave { font-weight:900; letter-spacing:2px; font-size:1.5rem; color:#ef4444; }
+				.campus-cravings-logo { height: 50px; width: auto; transition: transform 0.3s ease; }
+				.campus-cravings-logo:hover { transform: scale(1.05); }
 				/* Navbar styles to match main */
-				header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); }
+				header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: rgba(10, 10, 12, 0.9) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
 				.logo-section { position: absolute; left: 2rem; top: 50%; transform: translateY(-50%); }
+				.logo-section a { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+				.brand-text { font-size: 1.25rem; font-weight: 800; color: #ffffff; letter-spacing: 0.05em; transition: color 0.3s ease; }
+				.logo-section a:hover .brand-text { color: #ef4444; }
 				.profile-section { position: absolute; right: 2rem; top: 50%; transform: translateY(-50%); }
 				.nav-buttons { display: none; }
 				@media (min-width: 768px) { .nav-buttons { display: flex; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); gap: 1rem; } }
@@ -278,7 +294,10 @@ $initials = initials($displayName);
 			<div class="relative h-16 max-w-7xl mx-auto px-4">
 				<!-- Logo left -->
 				<div class="logo-section">
-					<h2 class="food-wave">Food Wave</h2>
+					<a href="./navbar.php">
+						<img src="../resources/logo.jpg" alt="Campus Cravings" class="campus-cravings-logo" />
+						<span class="brand-text">Campus Cravings</span>
+					</a>
 				</div>
 
 				<!-- Nav center (desktop) -->
@@ -287,9 +306,12 @@ $initials = initials($displayName);
 					<div class="relative group">
 						<button type="button" class="px-4 py-2 rounded text-sm hover:bg-red-600 hover:bg-opacity-80">Shop</button>
 						<div class="absolute left-0 mt-2 w-48 bg-black bg-opacity-90 border border-gray-800 rounded shadow-lg opacity-0 group-hover:opacity-100 transform scale-95 group-hover:scale-100 transition-all origin-top">
-							<a href="./khans.php" class="block px-4 py-2 hover:bg-gray-700">Khans Kitchen</a>
-							<a href="./olympia.php" class="block px-4 py-2 hover:bg-gray-700">Olympia Kitchen</a>
-							<a href="./neptune.php" class="block px-4 py-2 hover:bg-gray-700">Neptune Kitchen</a>
+							<?php foreach ($shops as $shop): 
+								$isLegacy = in_array($shop['name'], ['khans', 'olympia', 'neptune']);
+								$shopUrl = $isLegacy ? "./" . htmlspecialchars($shop['name']) . ".php" : "./shop.php?name=" . urlencode($shop['name']);
+							?>
+								<a href="<?= $shopUrl ?>" class="block px-4 py-2 hover:bg-gray-700"><?= htmlspecialchars($shop['display_name']) ?></a>
+							<?php endforeach; ?>
 						</div>
 					</div>
 					<a href="./invoice.php" class="px-4 py-2 rounded text-sm hover:bg-red-600 hover:bg-opacity-80">Invoice</a>
