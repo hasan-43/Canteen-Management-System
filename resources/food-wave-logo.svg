@@ -1,0 +1,26 @@
+<svg width="180" height="50" viewBox="0 0 180 50" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#dc2626;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b91c1c;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Wave icon -->
+  <path d="M8 25 Q12 20, 16 25 T24 25 Q28 30, 32 25" stroke="url(#waveGradient)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="10" cy="25" r="2" fill="#ef4444"/>
+  <circle cx="22" cy="25" r="2" fill="#dc2626"/>
+  <circle cx="30" cy="25" r="1.5" fill="#b91c1c"/>
+  
+  <!-- FOOD text -->
+  <text x="40" y="28" font-family="Arial, sans-serif" font-size="18" font-weight="900" fill="#ffffff" letter-spacing="1">FOOD</text>
+  
+  <!-- WAVE text -->
+  <text x="40" y="43" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="url(#waveGradient)" letter-spacing="2">WAVE</text>
+  
+  <!-- Decorative elements -->
+  <circle cx="120" cy="25" r="1.5" fill="#ef4444" opacity="0.6"/>
+  <circle cx="125" cy="28" r="1" fill="#dc2626" opacity="0.5"/>
+  <circle cx="130" cy="23" r="1.2" fill="#b91c1c" opacity="0.4"/>
+</svg>
